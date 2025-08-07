@@ -1,0 +1,117 @@
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id            Int           @id @default(autoincrement())
+  name          String?
+  email         String        @unique
+  passwordHash  String
+  emailVerified DateTime?
+  image         String?
+  recipes       Recipe[]      @relation("AuthorRecipes")
+  favorites     Favorite[]
+  comments      Comment[] // tous les commentaires écrits par cet user
+  commentLikes  CommentLike[] // tous les likes de commentaire faits par cet user
+  accounts      Account[]
+  sessions      Session[]
+}
+
+model Recipe {
+  id          Int        @id @default(autoincrement())
+  title       String
+  description String?
+  imageUrl    String?
+  createdAt   DateTime   @default(now())
+  author      User       @relation("AuthorRecipes", fields: [authorId], references: [id])
+  authorId    Int
+  favorites   Favorite[]
+  comments    Comment[]
+  steps       Step[]
+  ingredients Ingredient[]
+  activeTime   String?      
+  totalTime    String?      
+  yield        String? 
+}
+
+model Step {
+  id        Int     @id @default(autoincrement())
+  text      String
+  recipeId  Int
+  recipe    Recipe  @relation(fields: [recipeId], references: [id])
+}
+
+model Ingredient {
+  id        Int     @id @default(autoincrement())
+  name      String
+  recipeId  Int
+  recipe    Recipe  @relation(fields: [recipeId], references: [id])
+}
+
+model Favorite {
+  user     User   @relation(fields: [userId], references: [id])
+  userId   Int
+  recipe   Recipe @relation(fields: [recipeId], references: [id])
+  recipeId Int
+
+  @@id([userId, recipeId])
+}
+
+model Comment {
+  id           Int           @id @default(autoincrement())
+  content      String
+  author       User          @relation(fields: [authorId], references: [id])
+  authorId     Int
+  recipe       Recipe        @relation(fields: [recipeId], references: [id])
+  recipeId     Int
+  createdAt    DateTime      @default(now())
+  commentLikes CommentLike[] // tous les likes reçus par ce commentaire
+}
+
+model CommentLike {
+  user      User    @relation(fields: [userId], references: [id])
+  userId    Int
+  comment   Comment @relation(fields: [commentId], references: [id])
+  commentId Int
+
+  @@id([userId, commentId])
+}
+
+model Account {
+  id                Int     @id @default(autoincrement())
+  userId            Int
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id])
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           Int      @id @default(autoincrement())
+  sessionToken String   @unique
+  userId       Int
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id])
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}

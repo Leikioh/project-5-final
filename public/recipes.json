@@ -1,0 +1,193 @@
+[
+    {
+      "slug": "turkey-sloppy-joes",
+      "title": "Chef John's Turkey Sloppy Joes",
+      "author": "John Keller",
+      "rating": "5.0",
+      "image": "/images/poulet.jpg",
+      "description": "A delicious, quick, and healthy version of the classic sloppy joe using lean turkey meat.",
+      "ingredients": [
+        "500g ground turkey",
+        "1 onion, chopped",
+        "2 cloves garlic, minced",
+        "1 bell pepper, chopped",
+        "1 cup tomato sauce",
+        "1 tbsp olive oil",
+        "Salt and pepper to taste"
+      ],
+      "steps": [
+        "Heat olive oil in a pan and sauté onion, garlic, and bell pepper for 5 minutes.",
+        "Add ground turkey and cook until browned.",
+        "Pour in tomato sauce and season with salt and pepper.",
+        "Simmer for 10–15 minutes.",
+        "Serve on buns or over rice."
+      ]
+    },
+    {
+      "slug": "brown-sugar-meatloaf",
+      "title": "Brown Sugar Meatloaf",
+      "author": "Danial Caleem",
+      "rating": "3.0",
+      "image": "/images/photo2.jpg",
+      "description": "This sweet meatloaf is a comforting classic perfect for family dinners.",
+      "ingredients": [
+        "500g ground beef",
+        "1/2 cup brown sugar",
+        "1/2 cup ketchup",
+        "1 egg",
+        "1 onion, chopped",
+        "1 cup breadcrumbs",
+        "Salt and pepper to taste"
+      ],
+      "steps": [
+        "Preheat oven to 180°C (350°F).",
+        "Mix brown sugar and half the ketchup, spread in loaf pan.",
+        "Combine remaining ingredients and place on top.",
+        "Bake for 1 hour."
+      ]
+    },
+    {
+        "slug": "awesome-slow-cooker-pot-roast",
+        "title": "Awesome Slow Cooker Pot Roast",
+        "author": "Janet Small",
+        "rating": "4.5",
+        "image": "/images/photo3.jpg",
+        "description": "Tender and flavorful pot roast made easy in the slow cooker.",
+        "ingredients": [
+            "1.5kg beef roast",
+            "4 carrots, chopped",
+            "4 potatoes, quartered",
+            "1 onion, sliced",
+            "2 cups beef broth",
+            "Salt and pepper to taste"
+        ],
+        "steps": [
+            "Place vegetables in slow cooker.",
+            "Add roast on top and season.",
+            "Pour in beef broth.",
+            "Cook on low for 8 hours."
+        ]
+    },
+    {
+        "slug": "broiled-tilapia-parmesan",
+        "title": "Broiled Tilapia Parmesan",
+        "author": "Alexa Dorchest",
+        "rating": "5.0",
+        "image": "/images/photo4.jpg",
+        "description": "A simple and tasty tilapia recipe with a cheesy twist.",
+        "ingredients": [
+            "4 tilapia fillets",
+            "1/2 cup grated Parmesan",
+            "1/4 cup butter, softened",
+            "1 tbsp lemon juice",
+            "1 tsp dried basil"
+        ],
+        "steps": [
+            "Preheat broiler.",
+            "Mix Parmesan, butter, lemon juice, and basil.",
+            "Spread mixture over fillets.",
+            "Broil for 4–5 minutes."
+        ]
+    },
+    {
+        "slug": "baked-teriyaki-chicken",
+        "title": "Baked Teriyaki Chicken",
+        "author": "Ben Kaller",
+        "rating": "4.6",
+        "image": "/images/photo5.jpg",
+        "description": "Oven-baked chicken breasts glazed with a rich teriyaki sauce.",
+        "ingredients": [
+            "4 chicken breasts",
+            "1/2 cup soy sauce",
+            "1/4 cup brown sugar",
+            "2 tbsp rice vinegar",
+            "1 garlic clove, minced"
+        ],
+        "steps": [
+            "Preheat oven to 200°C (400°F).",
+            "Whisk sauce ingredients.",
+            "Place chicken in baking dish, pour sauce over.",
+            "Bake 30–35 minutes."
+        ]
+    },
+    {
+        "slug": "zesty-slow-cooker-chicken",
+        "title": "Zesty Slow Cooker Chicken",
+        "author": "Sam Brown",
+        "rating": "3.9",
+        "image": "/images/photo6.jpg",
+        "description": "Zingy and easy chicken slow-cooked to perfection.",
+        "ingredients": [
+            "6 chicken thighs",
+            "1/2 cup Italian dressing",
+            "1/4 cup lemon juice",
+            "1 tbsp garlic powder",
+            "Zest of one lemon"
+        ],
+        "steps": [
+            "Add all ingredients to slow cooker.",
+            "Cook on low for 6–7 hours.",
+            "Serve with rice or salad."
+        ]
+    },
+    {
+        "slug": "rosemary-ranch-chicken-kabobs",
+        "title": "Rosemary Ranch Chicken Kabobs",
+        "author": "Theresa Samuel",
+        "rating": "3.6",
+        "image": "/images/photo7.jpg",
+        "description": "Juicy kabobs with a punch of rosemary and ranch flavor.",
+        "ingredients": [
+            "500g chicken breast, cubed",
+            "1/2 cup ranch dressing",
+            "1 tbsp rosemary",
+            "Skewers"
+        ],
+        "steps": [
+            "Marinate chicken in ranch and rosemary 1 hour.",
+            "Thread onto skewers.",
+            "Grill 5–7 minutes per side."
+        ]
+    },
+    {
+        "slug": "slow-cooker-pulled-pork",
+        "title": "Slow Cooker Pulled Pork",
+        "author": "Adam Brown",
+        "rating": "2.9",
+        "image": "/images/photo8.jpg",
+        "description": "Tender shredded pork slow-cooked with barbecue sauce.",
+        "ingredients": [
+            "1.5kg pork shoulder",
+            "1 cup BBQ sauce",
+            "1 onion, chopped",
+            "1 tsp smoked paprika"
+        ],
+        "steps": [
+            "Place all ingredients in slow cooker.",
+            "Cook on low for 8 hours.",
+            "Shred pork and mix with sauce."
+        ]
+    },
+    {
+        "slug": "greek-lemon-chicken-potatoes",
+        "title": "Greek Lemon Chicken and Potatoes",
+        "author": "Thomas Haller",
+        "rating": "3.6",
+        "image": "/images/photo9.jpg",
+        "description": "A Mediterranean classic with lemon, herbs, and crispy potatoes.",
+        "ingredients": [
+            "4 chicken thighs",
+            "4 potatoes, sliced",
+            "1/4 cup olive oil",
+            "Juice of 1 lemon",
+            "1 tsp oregano"
+        ],
+        "steps": [
+            "Preheat oven to 200°C.",
+            "Arrange chicken and potatoes in dish.",
+            "Drizzle with oil, lemon juice, and sprinkle oregano.",
+            "Bake 45–50 minutes."
+        ]
+    }
+  ]
+  
