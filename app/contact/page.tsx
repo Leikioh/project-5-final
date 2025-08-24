@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 import Navbar from "@/components/Navbar";
-import Footer from "@/components/Footer";
 
 export default function ContactPage() {
   const [formData, setFormData] = useState({
@@ -92,7 +91,6 @@ export default function ContactPage() {
           </form>
         </div>
       </main>
-      <Footer />
     </>
   );
 }

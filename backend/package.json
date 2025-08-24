@@ -4,26 +4,28 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "seed": "ts-node -r tsconfig-paths/register prisma/seed.ts",
     "dev": "ts-node src/server.ts",
-    "build": "tsc",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "prisma:generate": "prisma generate",
+    "prisma:migrate": "prisma migrate dev",
+    "prisma:push": "prisma db push",
+    "seed": "ts-node prisma/seed.ts",
+    "db:reset": "prisma migrate reset --force --skip-generate --skip-seed && npm run seed"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "type": "commonjs",
   "devDependencies": {
-    "@prisma/client": "^6.9.0",
+    "@prisma/client": "^6.13.0",
     "@types/cookie-parser": "^1.4.9",
     "@types/cors": "^2.8.18",
     "@types/express": "^5.0.2",
     "@types/jsonwebtoken": "^9.0.9",
-    "@types/node": "^22.15.29",
-    "prisma": "^6.9.0",
+    "@types/node": "^22.17.1",
+    "prisma": "^6.13.0",
     "ts-node": "^10.9.2",
     "tsconfig-paths": "^4.2.0",
-    "typescript": "^5.8.3"
+    "typescript": "^5.9.2"
   },
   "dependencies": {
     "bcryptjs": "^3.0.2",

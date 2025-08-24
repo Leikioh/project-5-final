@@ -6,9 +6,8 @@ import Link from "next/link";
 import "tailwindcss/tailwind.css";
 import { FaSearch, FaPlay, FaTimes } from "react-icons/fa";
 import { motion, AnimatePresence } from "framer-motion";
-import { usePathname } from "next/navigation";
-import { useAuth } from "@/app/context/AuthContext";
 import LikeButton from "@/components/LikeButton";
+import Navbar from "@/components/Navbar";
 
 
 // Types
@@ -24,13 +23,7 @@ const RecipeCard: React.FC<Recipe> = ({ id, imageUrl, title, rating, author }) =
   <Link href={`/recipes/${id}`} className="block">
     <div className="relative bg-white shadow-lg rounded-lg overflow-hidden hover:bg-gray-100 cursor-pointer w-[300px] h-[300px]">
       <div className="relative w-full h-40">
-        <Image
-          src={imageUrl}
-          alt={title}
-          fill
-          className="object-cover"
-          priority
-        />
+        <Image src={imageUrl} alt={title} fill className="object-cover" priority />
       </div>
       <LikeButton
         recipeId={id}
@@ -45,96 +38,47 @@ const RecipeCard: React.FC<Recipe> = ({ id, imageUrl, title, rating, author }) =
   </Link>
 );
 
-const Navbar: React.FC = () => {
-  const [menuOpen, setMenuOpen] = useState(false);
-  const pathname = usePathname();
-  const { user, logout, isAuthenticated } = useAuth();
-
-  const navItems = [
-    { name: "Home", href: "/" },
-    { name: "Recipes", href: "/recipes" },
-    { name: "Search", href: "/search" },
-    { name: "Contact", href: "/contact" },
-  ];
-
-  return (
-    <header className="bg-white fixed top-0 w-full z-50">
-      <div className="container mx-auto px-6 py-4 flex justify-between items-center">
-        <nav className="flex items-center gap-10">
-          <ul
-            className={`md:flex md:items-center absolute md:static bg-white w-full md:w-auto left-0 md:flex-row flex-col transition-all duration-300 ease-in-out ${
-              menuOpen ? "top-16" : "top-[-400px]"
-            }`}
-          >
-            {navItems.map((item) => {
-              const isActive = pathname === item.href;
-              return (
-                <li
-                  key={item.href}
-                  className={`group relative px-3 py-2 transition-colors duration-300 ${
-                    isActive
-                      ? "text-orange-500 font-bold"
-                      : "text-gray-700 hover:text-orange-500"
-                  }`}
-                >
-                  <Link href={item.href}>{item.name}</Link>
-                  {isActive && (
-                    <motion.div
-                      layoutId="underline"
-                      className="absolute left-0 bottom-0 w-full h-1 bg-orange-500 rounded-full"
-                    />
-                  )}
-                </li>
-              );
-            })}
-          </ul>
-        </nav>
-        <div className="hidden md:flex gap-4 items-center">
-          {!isAuthenticated ? (
-            <>
-              <Link href="/auth/sign-in" className="text-gray-500 px-4 py-2 rounded-lg hover:text-orange-500">Sign In</Link>
-              <Link href="/auth/register" className="bg-orange-500 px-4 py-2 rounded-lg text-white hover:shadow-lg">Sign Up</Link>
-            </>
-          ) : (
-            <>
-              <span className="text-gray-800 font-semibold">Hello, {user?.name ?? user?.email}</span>
-              <button onClick={logout} className="text-gray-500 px-4 py-2 rounded-lg hover:text-orange-500">Sign Out</button>
-            </>
-          )}
-        </div>
-        <button className="md:hidden" onClick={() => setMenuOpen(!menuOpen)}>☰</button>
-      </div>
-    </header>
-  );
-};
-
 const Banner = () => (
-  <div className="relative h-[500px] bg-cover bg-top flex items-center text-white text-left rounded-xl overflow-hidden mx-5 p-5 mt-20"
-    style={{ backgroundImage: "url('/images/banniere.png')" }}>
+  <div
+    className="relative h-[500px] bg-cover bg-top flex items-center text-white text-left rounded-xl overflow-hidden mx-5 p-5 mt-20"
+    style={{ backgroundImage: "url('/images/banniere.png')" }}
+  >
     <div className="absolute inset-0 bg-black opacity-40 rounded-xl"></div>
     <div className="relative max-w-xl">
       <h1 className="text-5xl font-bold leading-tight">Choose from thousands of recipes</h1>
       <p className="mt-4 text-lg">
-        Appropriately integrate technically sound value with scalable infomediaries negotiate sustainable strategic theme areas
+        Appropriately integrate technically sound value with scalable infomediaries negotiate
+        sustainable strategic theme areas
       </p>
-      <a href="/auth/sign-in" className="bg-orange-500 px-6 py-3 rounded-lg mt-4 inline-block text-white font-semibold">Sign up today →</a>
+      <a
+        href="/auth/sign-in"
+        className="bg-orange-500 px-6 py-3 rounded-lg mt-4 inline-block text-white font-semibold"
+      >
+        Sign up today →
+      </a>
     </div>
   </div>
 );
 
 const Sidebar = () => {
   const [isOpen, setIsOpen] = useState(false);
-
   return (
     <aside className="bg-white p-6 rounded-lg w-64 flex-row">
       <h2 className="text-3xl font-bold mb-6 text-gray-950">Recipes</h2>
-      <button className="w-full text-left font-bold text-gray-800 flex justify-between items-center" onClick={() => setIsOpen(!isOpen)}>
+      <button
+        className="w-full text-left font-bold text-gray-800 flex justify-between items-center"
+        onClick={() => setIsOpen(!isOpen)}
+      >
         Dish Type <span>{isOpen ? "-" : "+"}</span>
       </button>
       {isOpen && (
         <ul className="mt-3 space-y-3 text-gray-700">
           {["Appetizers", "Bread", "Cake", "Casserole", "Main Dishes", "Pasta"].map((cat) => (
-            <li key={cat}><a href="#" className="hover:text-orange-500">{cat}</a></li>
+            <li key={cat}>
+              <a href="#" className="hover:text-orange-500">
+                {cat}
+              </a>
+            </li>
           ))}
         </ul>
       )}
@@ -142,7 +86,13 @@ const Sidebar = () => {
   );
 };
 
-const SearchBar = ({ search, onSearchChange }: { search: string; onSearchChange: (v: string) => void }) => (
+const SearchBar = ({
+  search,
+  onSearchChange,
+}: {
+  search: string;
+  onSearchChange: (v: string) => void;
+}) => (
   <div className="w-full flex justify-between items-center bg-white shadow-md rounded-lg p-4 mt-10 max-w-7xl mx-auto">
     <input
       type="text"
@@ -151,24 +101,47 @@ const SearchBar = ({ search, onSearchChange }: { search: string; onSearchChange:
       value={search}
       onChange={(e) => onSearchChange(e.target.value)}
     />
-    <button className="bg-orange-500 p-3 text-white rounded-lg"><FaSearch /></button>
+    <button className="bg-orange-500 p-3 text-white rounded-lg">
+      <FaSearch />
+    </button>
   </div>
 );
 
-const Pagination = ({ currentPage, totalPages, onPageChange }: {
+const Pagination = ({
+  currentPage,
+  totalPages,
+  onPageChange,
+}: {
   currentPage: number;
   totalPages: number;
   onPageChange: (page: number) => void;
 }) => (
   <div className="flex justify-center mt-10 space-x-2">
-    <button onClick={() => onPageChange(currentPage - 1)} disabled={currentPage === 1}
-      className="px-3 py-1 bg-gray-200 text-black rounded hover:bg-orange-500 hover:text-white disabled:opacity-50">«</button>
+    <button
+      onClick={() => onPageChange(currentPage - 1)}
+      disabled={currentPage === 1}
+      className="px-3 py-1 bg-gray-200 text-black rounded hover:bg-orange-500 hover:text-white disabled:opacity-50"
+    >
+      «
+    </button>
     {Array.from({ length: totalPages }, (_, i) => i + 1).map((n) => (
-      <button key={n} onClick={() => onPageChange(n)}
-        className={`px-3 py-1 rounded ${n === currentPage ? "bg-orange-500 text-white" : "bg-gray-100 hover:bg-orange-500 hover:text-white"}`}>{n}</button>
+      <button
+        key={n}
+        onClick={() => onPageChange(n)}
+        className={`px-3 py-1 rounded ${
+          n === currentPage ? "bg-orange-500 text-white" : "bg-gray-100 hover:bg-orange-500 hover:text-white"
+        }`}
+      >
+        {n}
+      </button>
     ))}
-    <button onClick={() => onPageChange(currentPage + 1)} disabled={currentPage === totalPages}
-      className="px-3 py-1 bg-gray-200 text-black rounded hover:bg-orange-500 hover:text-white disabled:opacity-50">»</button>
+    <button
+      onClick={() => onPageChange(currentPage + 1)}
+      disabled={currentPage === totalPages}
+      className="px-3 py-1 bg-gray-200 text-black rounded hover:bg-orange-500 hover:text-white disabled:opacity-50"
+    >
+      »
+    </button>
   </div>
 );
 
@@ -194,8 +167,18 @@ const VideoSection = () => {
       <h2 className="text-3xl font-bold mb-6 text-gray-950">Videos</h2>
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
         {videos.map((video, index) => (
-          <div key={index} className="relative rounded-xl overflow-hidden shadow-xl group cursor-pointer" onClick={() => setModalVideo(video.src)}>
-            <video src={video.src} preload="metadata" className="w-full h-48 object-cover pointer-events-none brightness-90 group-hover:brightness-75 transition duration-300" muted playsInline />
+          <div
+            key={index}
+            className="relative rounded-xl overflow-hidden shadow-xl group cursor-pointer"
+            onClick={() => setModalVideo(video.src)}
+          >
+            <video
+              src={video.src}
+              preload="metadata"
+              className="w-full h-48 object-cover pointer-events-none brightness-90 group-hover:brightness-75 transition duration-300"
+              muted
+              playsInline
+            />
             <div className="absolute inset-0 flex items-center justify-center">
               <div className="bg-black bg-opacity-40 rounded-full p-3 group-hover:bg-opacity-70 transition">
                 <FaPlay className="text-white text-2xl" />
@@ -210,10 +193,29 @@ const VideoSection = () => {
 
       <AnimatePresence>
         {modalVideo && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50">
-            <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }} className="relative w-full max-w-3xl p-4">
-              <button onClick={() => setModalVideo(null)} className="absolute top-2 right-2 text-white text-xl"><FaTimes /></button>
-              <motion.video ref={videoRef} key={modalVideo} src={modalVideo} controls autoPlay className="w-full rounded-lg shadow-lg" />
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50"
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="relative w-full max-w-3xl p-4"
+            >
+              <button onClick={() => setModalVideo(null)} className="absolute top-2 right-2 text-white text-xl">
+                <FaTimes />
+              </button>
+              <motion.video
+                ref={videoRef}
+                key={modalVideo}
+                src={modalVideo ?? undefined}
+                controls
+                autoPlay
+                className="w-full rounded-lg shadow-lg"
+              />
             </motion.div>
           </motion.div>
         )}
@@ -222,19 +224,6 @@ const VideoSection = () => {
   );
 };
 
-const Footer = () => (
-  <footer className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-4 gap-8 text-sm text-gray-600 mt-20 border-t pt-10 pb-16 text-center md:text-left justify-items-center md:justify-items-start">
-    <div>
-      <h4 className="font-semibold text-gray-800 mb-2">Follow us</h4>
-      <div className="flex justify-center md:justify-start space-x-4 text-xl">
-        <a href="#">🔵</a>
-        <a href="#">📸</a>
-        <a href="#">🐦</a>
-      </div>
-    </div>
-  </footer>
-);
-
 const Page: React.FC = () => {
   const [recipes, setRecipes] = useState<Recipe[]>([]);
   const [search, setSearch] = useState("");
@@ -242,21 +231,18 @@ const Page: React.FC = () => {
   const [totalPages] = useState(1);
 
   useEffect(() => {
-  const fetchRecipes = async () => {
-    try {
-      const res = await fetch(
-        `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/recipes`
-      );
-
-      const data = await res.json();
-      setRecipes(Array.isArray(data.recipes) ? data.recipes : []);
-    } catch (err) {
-      console.error("❌ FETCH ERROR:", err);
-      setRecipes([]);
-    }
-  };
-  fetchRecipes();
-}, []);
+    const fetchRecipes = async () => {
+      try {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/recipes`);
+        const data = await res.json();
+        setRecipes(Array.isArray(data.recipes) ? data.recipes : []);
+      } catch (err) {
+        console.error("❌ FETCH ERROR:", err);
+        setRecipes([]);
+      }
+    };
+    fetchRecipes();
+  }, []);
 
   return (
     <div>
@@ -277,13 +263,16 @@ const Page: React.FC = () => {
               </div>
             )}
             {totalPages > 1 && (
-              <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
+              <Pagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                onPageChange={setCurrentPage}
+              />
             )}
           </div>
         </div>
       </div>
       <VideoSection />
-      <Footer />
     </div>
   );
 };

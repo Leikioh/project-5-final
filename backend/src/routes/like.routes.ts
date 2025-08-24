@@ -5,7 +5,10 @@ import { ensureAuth } from "../middlewares/auth.middleware";
 
 const router = express.Router();
 
+// POST /api/likes  (body: { recipeId })
 router.post("/", ensureAuth, toggleLike);
+
+// GET /api/likes/:recipeId  (public, mais on détecte si l’utilisateur a liké via cookie)
 router.get("/:recipeId", getLikesCount);
 
 export default router;

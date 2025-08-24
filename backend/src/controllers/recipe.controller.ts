@@ -122,8 +122,12 @@ export async function getRecipeById(req: Request, res: Response): Promise<void> 
         author: { select: { id: true, name: true } },
         steps: true,
         ingredients: true,
-        comments: true,
         favorites: true,
+        comments: {
+          include: {
+            author: { select: { id: true, name: true } },
+          },
+        },
       },
     });
 
@@ -190,7 +194,7 @@ export async function addCommentToRecipe(req: AuthRequest, res: Response): Promi
         favorites: true,
         comments: {
           include: {
-            author: { select: { name: true } }, // ← pour afficher le nom du commentateur
+            author: { select: { id: true, name: true } },
           },
         },
       },

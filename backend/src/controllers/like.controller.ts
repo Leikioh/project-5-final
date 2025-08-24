@@ -1,4 +1,3 @@
-// backend/src/controllers/like.controller.ts
 import { Request, Response } from "express";
 import prisma from "../prisma/client";
 import { AuthRequest } from "../types/express";
@@ -6,12 +5,10 @@ import jwt from "jsonwebtoken";
 
 /**
  * POST /api/likes
- * Permet de “liker” ou “unliker” une recette (nécessite un utilisateur authentifié).
+ * Body: { recipeId: number }
+ * Toggle like (auth requise via cookie)
  */
-export async function toggleLike(
-  req: AuthRequest,
-  res: Response
-): Promise<void> {
+export async function toggleLike(req: AuthRequest, res: Response): Promise<void> {
   try {
     const userId = req.userId;
     if (!userId) {
@@ -25,17 +22,16 @@ export async function toggleLike(
       return;
     }
 
-    // Vérifie l’existence
     const recipe = await prisma.recipe.findUnique({ where: { id: recipeId } });
     if (!recipe) {
       res.status(404).json({ error: "Recette introuvable" });
       return;
     }
 
-    // Toggle
     const existing = await prisma.favorite.findUnique({
       where: { userId_recipeId: { userId, recipeId } },
     });
+
     if (existing) {
       await prisma.favorite.delete({
         where: { userId_recipeId: { userId, recipeId } },
@@ -46,11 +42,9 @@ export async function toggleLike(
       });
     }
 
-    // Re-calcul du nombre TOTAL de likes
     const count = await prisma.favorite.count({ where: { recipeId } });
     const liked = !existing;
 
-    // On renvoie l’état final
     res.status(200).json({ liked, count });
   } catch (err) {
     console.error("toggleLike error:", err);
@@ -60,9 +54,12 @@ export async function toggleLike(
 
 /**
  * GET /api/likes/:recipeId
- * Renvoie le nombre de likes (favorites) pour une recette donnée.
+ * Public. Renvoie { count, liked } ; "liked" détecté via cookie si présent.
  */
-export async function getLikesCount(req: Request, res: Response): Promise<void> {
+export async function getLikesCount(
+  req: Request & { cookies: Record<string, string> },
+  res: Response
+): Promise<void> {
   const recipeId = Number(req.params.recipeId);
   if (isNaN(recipeId)) {
     res.status(400).json({ error: "ID invalide" });
@@ -71,19 +68,28 @@ export async function getLikesCount(req: Request, res: Response): Promise<void> 
 
   const count = await prisma.favorite.count({ where: { recipeId } });
 
-  // Décoder le token si présent pour renvoyer ajouté/déjà liké
   let liked = false;
+
+  // Lecture du cookie JWT (si présent)
+  const tokenCookie = req.cookies?.token;
+  // Lecture du header Authorization (si présent)
   const auth = req.headers.authorization;
-  if (auth?.startsWith("Bearer ")) {
+  const token =
+    tokenCookie ||
+    (auth?.startsWith("Bearer ") ? auth.slice(7) : undefined);
+
+  if (token) {
     try {
-      const payload = jwt.verify(auth.slice(7), process.env.JWT_SECRET!) as {
+      const payload = jwt.verify(token, process.env.JWT_SECRET!) as {
         userId: number;
       };
       const exists = await prisma.favorite.findUnique({
         where: { userId_recipeId: { userId: payload.userId, recipeId } },
       });
       liked = !!exists;
-    } catch {}
+    } catch {
+      // token invalide → liked = false
+    }
   }
 
   res.status(200).json({ count, liked });

@@ -2,49 +2,77 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import { useAuth } from "@/app/context/AuthContext";
 
 const navItems = [
   { name: "Home", href: "/" },
-  { name: "Recipes", href: "/recipes" },   // corrigé de "/recipe" en "/recipes"
+  { name: "Recipes", href: "/recipes" },
   { name: "Search", href: "/search" },
   { name: "Contact", href: "/contact" },
 ];
 
-const Navbar: React.FC = () => {
-  const [menuOpen, setMenuOpen] = useState(false);
+export default function Navbar() {
   const pathname = usePathname();
   const { user, logout, isAuthenticated } = useAuth();
 
+  // refs pour chaque item
+  const itemRefs = useRef<(HTMLLIElement | null)[]>([]);
+  const containerRef = useRef<HTMLUListElement | null>(null);
+
+  // position et largeur de l’underline
+  const [underline, setUnderline] = useState({ x: 0, w: 0 });
+
+  // calcule l’index actif en fonction du pathname
+  const activeIndex = (() => {
+    if (pathname === "/") return 0;
+    const i = navItems.findIndex((n) => n.href !== "/" && pathname.startsWith(n.href));
+    return i === -1 ? 0 : i;
+  })();
+
+  // met à jour la position/largeur de l’underline quand la route ou la taille change
+  useEffect(() => {
+    const update = () => {
+      const li = itemRefs.current[activeIndex];
+      const ul = containerRef.current;
+      if (!li || !ul) return;
+
+      const liRect = li.getBoundingClientRect();
+      const ulRect = ul.getBoundingClientRect();
+      setUnderline({ x: liRect.left - ulRect.left, w: liRect.width });
+    };
+
+    update();
+    window.addEventListener("resize", update);
+    return () => window.removeEventListener("resize", update);
+  }, [activeIndex, pathname]);
+
   return (
-    <header className="bg-white fixed top-0 w-full z-50">
+    <header className="bg-white fixed top-0 w-full z-50 shadow-sm">
       <div className="container mx-auto px-6 py-4 flex justify-between items-center">
-        <nav className="flex items-center gap-10">
+        <nav className="relative">
           <ul
-            className={`md:flex md:items-center absolute md:static bg-white w-full md:w-auto left-0 md:flex-row flex-col transition-all duration-300 ease-in-out ${
-              menuOpen ? "top-16" : "top-[-400px]"
-            }`}
+            ref={containerRef}
+            className="flex items-center gap-8 relative"
           >
-            {navItems.map((item) => {
-              const isActive = pathname.startsWith(item.href);
+            {/* Underline unique, positionnée globalement */}
+            <motion.div
+              className="absolute bottom-0 h-1 bg-orange-500 rounded-full"
+              animate={{ x: underline.x, width: underline.w }}
+              transition={{ type: "spring", stiffness: 300, damping: 30 }}
+            />
+            {navItems.map((item, idx) => {
+              const isActive = idx === activeIndex;
               return (
                 <li
                   key={item.href}
-                  className={`group relative px-3 py-2 transition-colors duration-300 ${
-                    isActive
-                      ? "text-orange-500 font-bold"
-                      : "text-gray-700 hover:text-orange-500"
+                  ref={(el) => {itemRefs.current[idx] = el;}}
+                  className={`relative px-1 py-2 ${
+                    isActive ? "text-orange-500 font-bold" : "text-gray-700 hover:text-orange-500"
                   }`}
                 >
                   <Link href={item.href}>{item.name}</Link>
-                  {isActive && (
-                    <motion.div
-                      layoutId="underline"
-                      className="absolute left-0 bottom-0 w-full h-1 bg-orange-500 rounded-full"
-                    />
-                  )}
                 </li>
               );
             })}
@@ -67,7 +95,7 @@ const Navbar: React.FC = () => {
                 Hello, {user?.name ?? user?.email}
               </span>
               <button
-                onClick={() => logout()}
+                onClick={logout}
                 className="text-gray-500 px-4 py-2 rounded-lg hover:text-orange-500"
               >
                 Sign Out
@@ -75,13 +103,7 @@ const Navbar: React.FC = () => {
             </>
           )}
         </div>
-
-        <button className="md:hidden" onClick={() => setMenuOpen(!menuOpen)}>
-          ☰
-        </button>
       </div>
     </header>
   );
-};
-
-export default Navbar;
+}

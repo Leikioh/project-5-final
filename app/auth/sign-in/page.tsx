@@ -98,10 +98,10 @@ const AuthPage: React.FC = () => {
               {isSignUp && (
                 <input
                   type="text"
-                  placeholder="Nom (optionnel)"
+                  placeholder="Nom d'utilisateur"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  className="px-4 py-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-orange-500"
+                  className="px-4 py-3 rounded-lg border text-black border-gray-300 focus:outline-none focus:ring-2 focus:ring-orange-500"
                 />
               )}
               <input
@@ -126,7 +126,7 @@ const AuthPage: React.FC = () => {
                   placeholder="Confirmer le mot de passe"
                   value={confirm}
                   onChange={(e) => setConfirm(e.target.value)}
-                  className="px-4 py-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-orange-500"
+                  className="px-4 py-3 rounded-lg border text-black border-gray-300 focus:outline-none focus:ring-2 focus:ring-orange-500"
                   required
                 />
               )}

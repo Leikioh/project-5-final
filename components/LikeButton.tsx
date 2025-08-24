@@ -1,79 +1,80 @@
-// components/LikeButton.tsx
 "use client";
+import React, { useEffect, useState } from "react";
 
-import React, { useState, useEffect } from "react";
-import { FaHeart, FaRegHeart } from "react-icons/fa";
-import { useAuth } from "@/app/context/AuthContext";
-
-interface LikeButtonProps {
+type Props = {
   recipeId: number;
-  // permet de passer positionnement + styles spécifiques
   className?: string;
-}
+};
 
-export default function LikeButton({
-  recipeId,
-  className = "",
-}: LikeButtonProps) {
-  const { token, isAuthenticated } = useAuth();
-  const [count, setCount] = useState(0);
+export default function LikeButton({ recipeId, className }: Props) {
   const [liked, setLiked] = useState(false);
 
-  // Charge état initial
+  const [loading, setLoading] = useState(false);
+
+  // Charger l'état initial du like
   useEffect(() => {
-    const headers: Record<string,string> = {};
-    if (token) headers.Authorization = `Bearer ${token}`;
-
-    fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/likes/${recipeId}`, {
-      cache: "no-store",
-      headers,
-    })
-      .then((r) => r.json())
-      .then((data: { count: number; liked?: boolean }) => {
-        setCount(data.count);
-        if (typeof data.liked === "boolean") setLiked(data.liked);
-      })
-      .catch(console.error);
-  }, [recipeId, token]);
-
-  // Toggle like/unlike
-  const toggle = async () => {
-    if (!isAuthenticated || !token) {
-      alert("Connectez-vous pour liker !");
-      return;
-    }
-    const res = await fetch(
-      `${process.env.NEXT_PUBLIC_API_URL}/api/likes`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ recipeId }),
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch(
+          `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/likes/${recipeId}`,
+          { credentials: "include", cache: "no-store" }
+        );
+        if (!res.ok) return;
+        const data = await res.json();
+        if (!cancelled) {
+          setLiked(!!data.liked);
+          
+        }
+      } catch (err) {
+        console.error(err);
       }
-    );
-    const data = (await res.json()) as { liked: boolean; count: number };
-    setLiked(data.liked);
-    setCount(data.count);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [recipeId]);
+
+  const onClick = async (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (loading) return;
+
+    setLoading(true);
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/likes`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ recipeId }),
+      });
+
+      if (res.status === 401) {
+        alert("Connecte-toi pour liker ✨");
+        return;
+      }
+      if (!res.ok) return;
+
+      const { liked: newLiked, } = await res.json();
+      setLiked(newLiked);
+      
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
-    <button
-      onClick={(e) => {
-        e.stopPropagation();
-        e.preventDefault();
-        toggle();
-      }}
-      className={`${className} flex items-center gap-1 focus:outline-none`}
-      aria-label={liked ? "Retirer le like" : "Ajouter un like"}
-    >
-      {liked ? (
-        <FaHeart className="h-6 w-6 text-red-500" />
-      ) : (
-        <FaRegHeart className="h-6 w-6 text-white" />
-      )}
-      <span className="text-sm text-white">{count}</span>
-    </button>
+<button
+  type="button"
+  onClick={onClick}
+  aria-pressed={liked}
+  className={`bg-transparent shadow-none border-none outline-none p-0 ${className ?? ""}`}
+>
+  <span className={liked ? "text-red-500 text-xl" : "text-gray-400 text-xl"}>
+    {liked ? "❤️" : "🤍"}
+  </span>
+</button>
   );
 }

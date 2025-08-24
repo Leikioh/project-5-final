@@ -1,34 +1,21 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
 import Image from "next/image";
-import { FaClock, FaUtensils } from 'react-icons/fa';
+import Link from "next/link";
+import { FaClock, FaUtensils } from "react-icons/fa";
 import { useCurrentUser } from "../../hooks/useCurrentUser";
 
-interface Step {
-  id: number;
-  text: string;
-}
-
-interface Ingredient {
-  id: number;
-  name: string;
-}
-
+interface Step { id: number; text: string; }
+interface Ingredient { id: number; name: string; }
 interface Comment {
   id: number;
-  author: {
-    name: string | null;
-  };
+  author: { name: string | null };
   content: string;
   createdAt: string;
 }
-
-interface Author {
-  id: number;
-  name: string | null;
-}
+interface Author { id: number; name: string | null; }
 
 interface Recipe {
   id: number;
@@ -45,12 +32,89 @@ interface Recipe {
   yield?: string;
 }
 
+/* RECETTES ALÉATOIRES */
+function RandomRecipes({ currentId }: { currentId: number }) {
+  type ListItem = {
+    id: number;
+    title: string;
+    imageUrl: string;
+    author: { id: number; name: string | null };
+  };
+
+  const [all, setAll] = useState<ListItem[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let mounted = true;
+    const load = async () => {
+      setLoading(true);
+      try {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/recipes`, { cache: "no-store" });
+        const data = await res.json();
+        const list: ListItem[] = Array.isArray(data.recipes) ? data.recipes : [];
+        if (mounted) setAll(list);
+      } catch {
+        if (mounted) setAll([]);
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    };
+    load();
+    return () => { mounted = false; };
+  }, []);
+
+  const picks = useMemo(() => {
+    const pool = all.filter(r => r.id !== currentId);
+    
+    for (let i = pool.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [pool[i], pool[j]] = [pool[j], pool[i]];
+    }
+    return pool.slice(0, 4);
+  }, [all, currentId]);
+
+  if (loading || picks.length === 0) return null;
+
+  return (
+    <section className="mt-14">
+      <h2 className="text-2xl font-bold mb-4  text-gray-800">Recettes similaires</h2>
+      <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+        {picks.map((r) => (
+          <Link key={r.id} href={`/recipes/${r.id}`} className="block group">
+            <div className="bg-white rounded-lg h-[260px] line-clamp-2 shadow hover:shadow-lg transition overflow-hidden">
+              <div className="relative h-40">
+                {r.imageUrl && (
+                  <Image
+                    src={r.imageUrl}
+                    alt={r.title}
+                    fill
+                    className="object-cover group-hover:scale-[1.02] transition"
+                  />
+                )}
+              </div>
+              <div className="p-3">
+                <p className="text-sm text-gray-500 mb-1">
+                  {r.author?.name ?? "Anonyme"}
+                </p>
+                <h3 className="text-base font-semibold text-gray-800 line-clamp-2">
+                  {r.title}
+                </h3>
+              </div>
+            </div>
+          </Link>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+
 export default function RecipeDetailPage() {
   const params = useParams();
-  const recipeId = Array.isArray(params?.id) ? params.id[0] : params?.id;
+  const recipeId = Array.isArray(params?.id) ? Number(params.id[0]) : Number(params?.id);
   const [recipe, setRecipe] = useState<Recipe | null>(null);
   const [loading, setLoading] = useState(true);
-  const [newComment, setNewComment] = useState('');
+  const [newComment, setNewComment] = useState("");
   const { user, loading: userLoading } = useCurrentUser();
 
   useEffect(() => {
@@ -83,7 +147,6 @@ export default function RecipeDetailPage() {
       });
 
       const responseText = await res.text();
-
       if (!res.ok) {
         console.error("❌ Failed to post comment. Status:", res.status);
         console.error("🧾 Server response:", responseText);
@@ -93,8 +156,7 @@ export default function RecipeDetailPage() {
 
       const updatedRecipe = JSON.parse(responseText);
       setRecipe(updatedRecipe);
-      setNewComment('');
-      alert("✅ Commentaire posté !");
+      setNewComment("");
     } catch (err) {
       console.error("💥 Error submitting comment:", err);
       alert("Erreur technique lors de l’envoi.");
@@ -173,13 +235,13 @@ export default function RecipeDetailPage() {
 
       {/* Comments */}
       <section className="mt-12">
-        <h2 className="text-2xl text-gray-700 font-bold mb-4">Comments</h2>
+        <h2 className="text-2xl text-black font-bold mb-4">Comments</h2>
         {recipe.comments?.length === 0 ? (
           <p className="text-gray-500">No comments yet.</p>
         ) : (
           <div className="space-y-4">
-            {recipe.comments.map((c, i) => (
-              <div key={i} className="border-b pb-2">
+            {recipe.comments.map((c) => (
+              <div key={c.id} className="border-b pb-2">
                 <p className="font-semibold text-orange-500">{c.author?.name ?? "Anonyme"}</p>
                 <p className="text-gray-700">{c.content}</p>
                 <p className="text-xs text-gray-400">{new Date(c.createdAt).toLocaleDateString()}</p>
@@ -205,6 +267,9 @@ export default function RecipeDetailPage() {
           <p className="text-sm text-gray-500 mt-4">🔐 Connecte-toi pour écrire un commentaire.</p>
         )}
       </section>
+
+      {/* ✅ 4 recettes aléatoires ici */}
+      {Number.isFinite(recipeId) && <RandomRecipes currentId={recipeId!} />}
     </main>
   );
 }
