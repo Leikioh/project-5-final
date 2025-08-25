@@ -1,21 +1,21 @@
-// app/api/comments/[id]/route.ts
-import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { NextResponse } from "next/server";
+import prisma from "@/lib/prisma";
+import { cookies } from "next/headers";
 
 export const runtime = "nodejs";
 
-function getUserId(req: NextRequest): number | null {
-  const raw = req.cookies.get("userId")?.value;
-  if (!raw) return null;
-  const n = Number(raw);
+async function getUserId(): Promise<number | null> {
+  const store = await cookies(); // ← await
+  const raw = store.get("userId")?.value;
+  const n = raw ? Number(raw) : NaN;
   return Number.isFinite(n) ? n : null;
 }
 
 export async function DELETE(
-  req: NextRequest,
+  _req: Request,
   { params }: { params: { id: string } }
 ) {
-  const userId = getUserId(req);
+  const userId = await getUserId(); // ← await ici aussi
   if (!userId) return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
 
   const id = Number(params.id);
@@ -23,12 +23,10 @@ export async function DELETE(
 
   const comment = await prisma.comment.findUnique({ where: { id } });
   if (!comment) return NextResponse.json({ error: "Introuvable" }, { status: 404 });
-
   if (comment.authorId !== userId) {
     return NextResponse.json({ error: "Interdit" }, { status: 403 });
   }
 
-  // Supprimer d'abord les likes liés (au cas où) puis le comment
   await prisma.$transaction([
     prisma.commentLike.deleteMany({ where: { commentId: id } }),
     prisma.comment.delete({ where: { id } }),

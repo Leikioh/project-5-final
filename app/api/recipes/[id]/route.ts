@@ -1,14 +1,15 @@
-// app/api/recipes/[id]/route.ts
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
+import { cookies } from "next/headers";
 import type { Prisma } from "@prisma/client";
 
 export const runtime = "nodejs";
 
-function getUserId(req: NextRequest): number | null {
-  const raw = req.cookies.get("userId")?.value;
-  if (!raw) return null;
-  const n = Number(raw);
+// getUserId doit être async, et on fera await à l'appel
+async function getUserId(): Promise<number | null> {
+  const store = await cookies();
+  const raw = store.get("userId")?.value;
+  const n = raw ? Number(raw) : NaN;
   return Number.isFinite(n) ? n : null;
 }
 
@@ -35,10 +36,7 @@ async function readRecipe(id: number) {
   });
 }
 
-export async function GET(
-  _req: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function GET(_req: Request, { params }: { params: { id: string } }) {
   const id = Number(params.id);
   if (!id) return NextResponse.json({ error: "ID invalide" }, { status: 400 });
 
@@ -47,12 +45,8 @@ export async function GET(
   return NextResponse.json(recipe);
 }
 
-// PUT /api/recipes/:id
-export async function PUT(
-  req: NextRequest,
-  { params }: { params: { id: string } }
-) {
-  const userId = getUserId(req);
+export async function PUT(req: Request, { params }: { params: { id: string } }) {
+  const userId = await getUserId(); // ← AWAIT ICI
   if (!userId) return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
 
   const id = Number(params.id);
@@ -62,23 +56,16 @@ export async function PUT(
   if (!recipe) return NextResponse.json({ error: "Introuvable" }, { status: 404 });
   if (recipe.authorId !== userId) return NextResponse.json({ error: "Interdit" }, { status: 403 });
 
-  let bodyUnknown: unknown;
+  let body: UpdateRecipeBody;
   try {
-    bodyUnknown = await req.json();
+    body = (await req.json()) as UpdateRecipeBody;
   } catch {
     return NextResponse.json({ error: "JSON invalide" }, { status: 400 });
   }
-  const body = bodyUnknown as UpdateRecipeBody;
 
-  const steps: string[] = Array.isArray(body.steps)
-    ? body.steps.map((s: string) => s.trim()).filter(Boolean)
-    : [];
+  const steps = Array.isArray(body.steps) ? body.steps.map((s) => s.trim()).filter(Boolean) : [];
+  const ingredients = Array.isArray(body.ingredients) ? body.ingredients.map((s) => s.trim()).filter(Boolean) : [];
 
-  const ingredients: string[] = Array.isArray(body.ingredients)
-    ? body.ingredients.map((s: string) => s.trim()).filter(Boolean)
-    : [];
-
-  // ✅ Typage pris depuis Prisma
   const updateData: Prisma.RecipeUpdateArgs["data"] = {
     title: body.title ?? recipe.title,
     description: body.description ?? recipe.description,
@@ -94,18 +81,14 @@ export async function PUT(
     if (Array.isArray(body.steps)) {
       await tx.step.deleteMany({ where: { recipeId: id } });
       if (steps.length) {
-        await tx.step.createMany({
-          data: steps.map((text: string) => ({ text, recipeId: id })),
-        });
+        await tx.step.createMany({ data: steps.map((text) => ({ text, recipeId: id })) });
       }
     }
 
     if (Array.isArray(body.ingredients)) {
       await tx.ingredient.deleteMany({ where: { recipeId: id } });
       if (ingredients.length) {
-        await tx.ingredient.createMany({
-          data: ingredients.map((name: string) => ({ name, recipeId: id })),
-        });
+        await tx.ingredient.createMany({ data: ingredients.map((name) => ({ name, recipeId: id })) });
       }
     }
   });
@@ -114,11 +97,8 @@ export async function PUT(
   return NextResponse.json(updated);
 }
 
-export async function DELETE(
-  req: NextRequest,
-  { params }: { params: { id: string } }
-) {
-  const userId = getUserId(req);
+export async function DELETE(_req: Request, { params }: { params: { id: string } }) {
+  const userId = await getUserId(); // ← AWAIT ICI
   if (!userId) return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
 
   const id = Number(params.id);
@@ -129,13 +109,7 @@ export async function DELETE(
   if (recipe.authorId !== userId) return NextResponse.json({ error: "Interdit" }, { status: 403 });
 
   await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
-    const commentIds = (
-      await tx.comment.findMany({
-        where: { recipeId: id },
-        select: { id: true },
-      })
-    ).map((c: { id: number }) => c.id);
-
+    const commentIds = (await tx.comment.findMany({ where: { recipeId: id }, select: { id: true } })).map((c) => c.id);
     if (commentIds.length) {
       await tx.commentLike.deleteMany({ where: { commentId: { in: commentIds } } });
     }
