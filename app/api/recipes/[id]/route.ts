@@ -5,7 +5,6 @@ import type { Prisma } from "@prisma/client";
 
 export const runtime = "nodejs";
 
-// getUserId doit être async, et on fera await à l'appel
 async function getUserId(): Promise<number | null> {
   const store = await cookies();
   const raw = store.get("userId")?.value;
@@ -36,8 +35,12 @@ async function readRecipe(id: number) {
   });
 }
 
-export async function GET(_req: Request, { params }: { params: { id: string } }) {
-  const id = Number(params.id);
+export async function GET(
+  _req: Request,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  { params }: any
+) {
+  const id = Number(params?.id);
   if (!id) return NextResponse.json({ error: "ID invalide" }, { status: 400 });
 
   const recipe = await readRecipe(id);
@@ -45,11 +48,15 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
   return NextResponse.json(recipe);
 }
 
-export async function PUT(req: Request, { params }: { params: { id: string } }) {
-  const userId = await getUserId(); // ← AWAIT ICI
+export async function PUT(
+  req: Request,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  { params }: any
+) {
+  const userId = await getUserId();
   if (!userId) return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
 
-  const id = Number(params.id);
+  const id = Number(params?.id);
   if (!id) return NextResponse.json({ error: "ID invalide" }, { status: 400 });
 
   const recipe = await prisma.recipe.findUnique({ where: { id } });
@@ -97,11 +104,15 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
   return NextResponse.json(updated);
 }
 
-export async function DELETE(_req: Request, { params }: { params: { id: string } }) {
-  const userId = await getUserId(); // ← AWAIT ICI
+export async function DELETE(
+  _req: Request,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  { params }: any
+) {
+  const userId = await getUserId();
   if (!userId) return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
 
-  const id = Number(params.id);
+  const id = Number(params?.id);
   if (!id) return NextResponse.json({ error: "ID invalide" }, { status: 400 });
 
   const recipe = await prisma.recipe.findUnique({ where: { id } });

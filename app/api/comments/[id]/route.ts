@@ -5,7 +5,7 @@ import { cookies } from "next/headers";
 export const runtime = "nodejs";
 
 async function getUserId(): Promise<number | null> {
-  const store = await cookies(); // ← await
+  const store = await cookies();
   const raw = store.get("userId")?.value;
   const n = raw ? Number(raw) : NaN;
   return Number.isFinite(n) ? n : null;
@@ -13,12 +13,13 @@ async function getUserId(): Promise<number | null> {
 
 export async function DELETE(
   _req: Request,
-  { params }: { params: { id: string } }
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  { params }: any
 ) {
-  const userId = await getUserId(); // ← await ici aussi
+  const userId = await getUserId();
   if (!userId) return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
 
-  const id = Number(params.id);
+  const id = Number(params?.id);
   if (!id) return NextResponse.json({ error: "ID invalide" }, { status: 400 });
 
   const comment = await prisma.comment.findUnique({ where: { id } });
