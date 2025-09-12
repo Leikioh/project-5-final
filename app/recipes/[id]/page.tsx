@@ -1,57 +1,113 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
+import type { JSX } from "react";
 import { useParams } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { FaClock, FaUtensils } from "react-icons/fa";
 import { useCurrentUser } from "../../hooks/useCurrentUser";
+import { apiPath } from "@/lib/api";
 
-interface Step { id: number; text: string; }
-interface Ingredient { id: number; name: string; }
-interface Comment {
+/* ── Types ─────────────────────────────────────────────────────────────────── */
+
+type Step = { id: number; text: string };
+type Ingredient = { id: number; name: string };
+type Author = { id: number; name: string | null };
+
+type CommentItem = {
   id: number;
-  author: { name: string | null };
+  author: { id?: number; name: string | null; email?: string };
   content: string;
   createdAt: string;
-}
-interface Author { id: number; name: string | null; }
+};
 
-interface Recipe {
+type CommentPayload = {
+  id: number;
+  content: string;
+  createdAt: string;
+  author?: { id?: number; name: string | null; email?: string };
+};
+
+type RecipeAPI = {
   id: number;
   title: string;
-  description?: string | null;
-  imageUrl?: string | null;
+  description: string | null;
+  imageUrl: string | null;
   author: Author;
   steps: Step[];
   ingredients: Ingredient[];
-  comments: Comment[];
-  favoritesCount: number;
-  activeTime?: string;
-  totalTime?: string;
-  yield?: string;
+  activeTime: string | null;
+  totalTime: string | null;
+  yield: string | null;
+  _count?: { favorites: number; comments: number };
+};
+
+/* ── Helpers ───────────────────────────────────────────────────────────────── */
+
+function isCommentPayload(v: unknown): v is CommentPayload {
+  if (!v || typeof v !== "object") return false;
+  const o = v as Record<string, unknown>;
+  return (
+    typeof o.id === "number" &&
+    typeof o.content === "string" &&
+    typeof o.createdAt === "string"
+  );
 }
 
-/* RECETTES ALÉATOIRES */
-function RandomRecipes({ currentId }: { currentId: number }) {
+/* ── Sous-composant: suggestions aléatoires ───────────────────────────────── */
+
+function RandomRecipes({ currentId }: { currentId: number }): JSX.Element | null {
   type ListItem = {
     id: number;
     title: string;
-    imageUrl: string;
+    imageUrl: string | null;
     author: { id: number; name: string | null };
   };
 
   const [all, setAll] = useState<ListItem[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState<boolean>(true);
 
   useEffect(() => {
     let mounted = true;
-    const load = async () => {
+
+    const load = async (): Promise<void> => {
       setLoading(true);
       try {
-        const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/recipes`, { cache: "no-store" });
-        const data = await res.json();
-        const list: ListItem[] = Array.isArray(data.recipes) ? data.recipes : [];
+        const res = await fetch(apiPath("/api/recipes"), { cache: "no-store", credentials: "include" });
+        if (!res.ok) {
+          if (mounted) setAll([]);
+          return;
+        }
+        const data: unknown = await res.json().catch(() => null);
+        const list: ListItem[] = Array.isArray(data)
+          ? (data as Array<Record<string, unknown>>)
+              .map((r) => ({
+                id: typeof r.id === "number" ? r.id : NaN,
+                title: typeof r.title === "string" ? r.title : "",
+                imageUrl: typeof r.imageUrl === "string" ? r.imageUrl : null,
+                author:
+                  typeof r === "object" &&
+                  r !== null &&
+                  "author" in r &&
+                  typeof (r as { author: unknown }).author === "object" &&
+                  (r as { author: Record<string, unknown> }).author !== null
+                    ? {
+                        id:
+                          typeof (r as { author: Record<string, unknown> }).author.id === "number"
+                            ? ((r as { author: Record<string, unknown> }).author.id as number)
+                            : NaN,
+                        name:
+                          typeof (r as { author: Record<string, unknown> }).author.name === "string" ||
+                          (r as { author: Record<string, unknown> }).author.name === null
+                            ? ((r as { author: Record<string, unknown> }).author.name as string | null)
+                            : null,
+                      }
+                    : { id: NaN, name: null },
+              }))
+              .filter((x) => Number.isFinite(x.id) && x.title.length > 0)
+          : [];
+
         if (mounted) setAll(list);
       } catch {
         if (mounted) setAll([]);
@@ -59,13 +115,16 @@ function RandomRecipes({ currentId }: { currentId: number }) {
         if (mounted) setLoading(false);
       }
     };
-    load();
-    return () => { mounted = false; };
+
+    void load();
+    return () => {
+      mounted = false;
+    };
   }, []);
 
   const picks = useMemo(() => {
-    const pool = all.filter(r => r.id !== currentId);
-    
+    const pool = all.filter((r) => r.id !== currentId).slice();
+    // shuffle
     for (let i = pool.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
       [pool[i], pool[j]] = [pool[j], pool[i]];
@@ -77,28 +136,22 @@ function RandomRecipes({ currentId }: { currentId: number }) {
 
   return (
     <section className="mt-14">
-      <h2 className="text-2xl font-bold mb-4  text-gray-800">Recettes similaires</h2>
+      <h2 className="text-2xl font-bold mb-4 text-gray-800">Recettes similaires</h2>
       <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
         {picks.map((r) => (
           <Link key={r.id} href={`/recipes/${r.id}`} className="block group">
-            <div className="bg-white rounded-lg h-[260px] line-clamp-2 shadow hover:shadow-lg transition overflow-hidden">
+            <div className="bg-white rounded-lg h-[260px] shadow hover:shadow-lg transition overflow-hidden">
               <div className="relative h-40">
-                {r.imageUrl && (
-                  <Image
-                    src={r.imageUrl}
-                    alt={r.title}
-                    fill
-                    className="object-cover group-hover:scale-[1.02] transition"
-                  />
-                )}
+                <Image
+                  src={r.imageUrl ?? "/images/placeholder.jpg"}
+                  alt={r.title}
+                  fill
+                  className="object-cover group-hover:scale-[1.02] transition"
+                />
               </div>
               <div className="p-3">
-                <p className="text-sm text-gray-500 mb-1">
-                  {r.author?.name ?? "Anonyme"}
-                </p>
-                <h3 className="text-base font-semibold text-gray-800 line-clamp-2">
-                  {r.title}
-                </h3>
+                <p className="text-sm text-gray-500 mb-1">{r.author?.name ?? "Anonyme"}</p>
+                <h3 className="text-base font-semibold text-gray-800 line-clamp-2">{r.title}</h3>
               </div>
             </div>
           </Link>
@@ -108,57 +161,177 @@ function RandomRecipes({ currentId }: { currentId: number }) {
   );
 }
 
+/* ── Page détail ───────────────────────────────────────────────────────────── */
 
-export default function RecipeDetailPage() {
-  const params = useParams();
-  const recipeId = Array.isArray(params?.id) ? Number(params.id[0]) : Number(params?.id);
-  const [recipe, setRecipe] = useState<Recipe | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [newComment, setNewComment] = useState("");
+export default function RecipeDetailPage(): JSX.Element {
+  const { id } = useParams<{ id: string }>();
+  const recipeId = Number(id);
+
+  const [recipe, setRecipe] = useState<RecipeAPI | null>(null);
+  const [comments, setComments] = useState<CommentItem[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [newComment, setNewComment] = useState<string>("");
+
   const { user, loading: userLoading } = useCurrentUser();
 
+  // Charger recette + commentaires
   useEffect(() => {
-    if (!recipeId) return;
-    const fetchRecipe = async () => {
+    if (!Number.isFinite(recipeId)) return;
+
+    let mounted = true;
+
+    const load = async (): Promise<void> => {
       setLoading(true);
       try {
-        const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/recipes/${recipeId}`);
-        const data = await res.json();
-        setRecipe(data);
-      } catch (err) {
-        console.error(err);
+        // 1) Recette
+        const res = await fetch(apiPath(`/api/recipes/${recipeId}`), {
+          cache: "no-store",
+          credentials: "include",
+        });
+        if (res.ok) {
+          const data: unknown = await res.json().catch(() => null);
+          const r = data as Partial<RecipeAPI> | null;
+
+          if (
+            r &&
+            typeof r === "object" &&
+            typeof r.id === "number" &&
+            typeof r.title === "string"
+          ) {
+            if (mounted) {
+              setRecipe({
+                id: r.id,
+                title: r.title,
+                description: (r.description ?? null) as string | null,
+                imageUrl: (r.imageUrl ?? null) as string | null,
+                author: (r.author ?? { id: NaN, name: null }) as Author,
+                steps: Array.isArray(r.steps) ? (r.steps as Step[]) : [],
+                ingredients: Array.isArray(r.ingredients) ? (r.ingredients as Ingredient[]) : [],
+                activeTime: (r.activeTime ?? null) as string | null,
+                totalTime: (r.totalTime ?? null) as string | null,
+                yield: (r.yield ?? null) as string | null,
+                _count: (r._count ?? undefined) as RecipeAPI["_count"],
+              });
+            }
+          } else if (mounted) {
+            setRecipe(null);
+          }
+        } else if (mounted) {
+          setRecipe(null);
+        }
+
+        // 2) Commentaires
+        const resC = await fetch(apiPath(`/api/comments?recipeId=${recipeId}`), {
+          cache: "no-store",
+          credentials: "include",
+        });
+        if (resC.ok) {
+          const cc: unknown = await resC.json().catch(() => null);
+          const list: CommentItem[] = Array.isArray(cc)
+            ? (cc as Array<Record<string, unknown>>)
+                .map((c) => ({
+                  id: typeof c.id === "number" ? c.id : NaN,
+                  author:
+                    typeof c === "object" &&
+                    c !== null &&
+                    "author" in c &&
+                    typeof (c as { author: unknown }).author === "object" &&
+                    (c as { author: Record<string, unknown> }).author !== null
+                      ? {
+                          name:
+                            typeof (c as { author: Record<string, unknown> }).author.name === "string" ||
+                            (c as { author: Record<string, unknown> }).author.name === null
+                              ? ((c as { author: Record<string, unknown> }).author.name as string | null)
+                              : null,
+                          email:
+                            typeof (c as { author: Record<string, unknown> }).author.email === "string"
+                              ? ((c as { author: Record<string, unknown> }).author.email as string)
+                              : undefined,
+                          id:
+                            typeof (c as { author: Record<string, unknown> }).author.id === "number"
+                              ? ((c as { author: Record<string, unknown> }).author.id as number)
+                              : undefined,
+                        }
+                      : { name: null },
+                  content: typeof c.content === "string" ? (c.content as string) : "",
+                  createdAt: typeof c.createdAt === "string" ? (c.createdAt as string) : new Date().toISOString(),
+                }))
+                .filter((x) => Number.isFinite(x.id) && x.content.length > 0)
+            : [];
+          if (mounted) setComments(list);
+        } else if (mounted) {
+          setComments([]);
+        }
+      } catch {
+        if (mounted) {
+          setRecipe(null);
+          setComments([]);
+        }
       } finally {
-        setLoading(false);
+        if (mounted) setLoading(false);
       }
     };
-    fetchRecipe();
+
+    void load();
+
+    return () => {
+      mounted = false;
+    };
   }, [recipeId]);
 
-  const handleCommentSubmit = async (e: React.FormEvent) => {
+  const handleCommentSubmit = async (e: React.FormEvent<HTMLFormElement>): Promise<void> => {
     e.preventDefault();
-    if (!newComment || !recipeId) return;
+    const content = newComment.trim();
+    if (!content || !Number.isFinite(recipeId)) return;
 
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/recipes/${recipeId}/comments`, {
+      // Notre API crée un commentaire via /api/comments (body: { recipeId, content })
+      const res = await fetch(apiPath("/api/comments"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ content: newComment }),
         credentials: "include",
+        body: JSON.stringify({ recipeId, content }),
       });
 
-      const responseText = await res.text();
       if (!res.ok) {
-        console.error("❌ Failed to post comment. Status:", res.status);
-        console.error("🧾 Server response:", responseText);
-        alert("Erreur lors de l’envoi du commentaire : " + responseText);
+        const txt = await res.text().catch(() => "");
+        alert(`Erreur lors de l’envoi du commentaire. ${txt}`);
         return;
       }
 
-      const updatedRecipe = JSON.parse(responseText);
-      setRecipe(updatedRecipe);
-      setNewComment("");
-    } catch (err) {
-      console.error("💥 Error submitting comment:", err);
+      // Réponse attendue: { id, content, createdAt, author? }
+      const createdUnknown: unknown = await res.json().catch(() => null);
+
+      if (isCommentPayload(createdUnknown)) {
+        const a = createdUnknown.author;
+        const author: CommentItem["author"] = {
+          id: typeof a?.id === "number" ? a.id : undefined,
+          name: (a?.name ?? null) as string | null,
+          email: typeof a?.email === "string" ? a.email : undefined,
+        };
+
+        const newC: CommentItem = {
+          id: createdUnknown.id,
+          content: createdUnknown.content,
+          createdAt: createdUnknown.createdAt,
+          author,
+        };
+
+        setComments((prev) => [newC, ...prev]);
+        setNewComment("");
+      } else {
+        // fallback : recharger la liste
+        const again = await fetch(apiPath(`/api/comments?recipeId=${recipeId}`), {
+          cache: "no-store",
+          credentials: "include",
+        });
+        if (again.ok) {
+          const list = (await again.json().catch(() => [])) as CommentItem[];
+          setComments(Array.isArray(list) ? list : []);
+          setNewComment("");
+        }
+      }
+    } catch {
       alert("Erreur technique lors de l’envoi.");
     }
   };
@@ -166,48 +339,57 @@ export default function RecipeDetailPage() {
   if (loading || userLoading) return <p className="text-center py-10">Chargement...</p>;
   if (!recipe) return <p className="text-center py-10 text-red-500">Recette introuvable.</p>;
 
+  const favoritesCount = recipe._count?.favorites ?? 0;
+
   return (
     <main className="max-w-6xl mx-auto px-4 py-8">
       {/* Image + Title */}
       <div className="relative w-full h-[400px] rounded-lg overflow-hidden mb-8 shadow-lg">
-        {recipe.imageUrl && (
-          <Image
-            src={recipe.imageUrl}
-            alt={recipe.title}
-            fill
-            className="object-cover"
-            sizes="(max-width: 768px) 100vw, 1200px"
-            priority
-          />
-        )}
+        <Image
+          src={recipe.imageUrl ?? "/images/placeholder.jpg"}
+          alt={recipe.title}
+          fill
+          className="object-cover"
+        />
       </div>
+
       <h1 className="text-4xl font-bold mb-2 text-gray-900">{recipe.title}</h1>
-      <p className="text-gray-600 mb-6">by {recipe.author?.name ?? "Anonyme"}</p>
+      <p className="text-gray-600 mb-6">
+        by{" "}
+        {recipe.author?.id ? (
+          <Link href={`/users/${recipe.author.id}`} className="text-orange-600 hover:underline">
+            {recipe.author?.name ?? "Anonyme"}
+          </Link>
+        ) : (
+          recipe.author?.name ?? "Anonyme"
+        )}
+      </p>
 
       {/* Description */}
-      {recipe.description && (
-        <p className="text-lg text-gray-800 mb-8">{recipe.description}</p>
-      )}
+      {recipe.description && <p className="text-lg text-gray-800 mb-8">{recipe.description}</p>}
 
       {/* Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-10">
-        <div className="flex gap-6 my-4">
-          <div className="flex items-center gap-2">
-            <FaClock className="text-orange-500" />
-            <span className="text-gray-700">{recipe.activeTime}</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <FaClock className="text-orange-500" />
-            <span className="text-gray-700">{recipe.totalTime}</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <FaUtensils className="text-orange-500" />
-            <span className="text-gray-700">{recipe.yield}</span>
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-10">
+        <div className="md:col-span-3">
+          <div className="flex flex-wrap gap-6 my-4">
+            <div className="flex items-center gap-2">
+              <FaClock className="text-orange-500" />
+              <span className="text-gray-700">{recipe.activeTime ?? "-"}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <FaClock className="text-orange-500" />
+              <span className="text-gray-700">{recipe.totalTime ?? "-"}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <FaUtensils className="text-orange-500" />
+              <span className="text-gray-700">{recipe.yield ?? "-"}</span>
+            </div>
           </div>
         </div>
+
         <div className="bg-orange-50 p-4 rounded shadow text-center">
           <p className="text-orange-500 text-sm font-bold">Favorites</p>
-          <p className="text-lg font-semibold text-gray-800">{recipe?.favoritesCount ?? 0}</p>
+          <p className="text-lg font-semibold text-gray-800">{favoritesCount}</p>
         </div>
       </div>
 
@@ -216,8 +398,10 @@ export default function RecipeDetailPage() {
         <section className="flex-1">
           <h2 className="text-2xl text-gray-700 font-bold mb-4">How to Make It</h2>
           <ol className="list-decimal list-inside space-y-3">
-            {(recipe.steps || []).map((step) => (
-              <li key={step.id} className="text-gray-800">{step.text}</li>
+            {(recipe.steps ?? []).map((step) => (
+              <li key={step.id} className="text-gray-800">
+                {step.text}
+              </li>
             ))}
           </ol>
         </section>
@@ -226,8 +410,10 @@ export default function RecipeDetailPage() {
         <aside className="w-full md:w-72 bg-white shadow rounded-lg p-6">
           <h2 className="text-xl text-gray-700 font-bold mb-4">Ingredients</h2>
           <ul className="list-disc list-inside space-y-2">
-            {(recipe.ingredients || []).map((ingredient) => (
-              <li key={ingredient.id} className="text-gray-800">{ingredient.name}</li>
+            {(recipe.ingredients ?? []).map((ingredient) => (
+              <li key={ingredient.id} className="text-gray-800">
+                {ingredient.name}
+              </li>
             ))}
           </ul>
         </aside>
@@ -236,15 +422,18 @@ export default function RecipeDetailPage() {
       {/* Comments */}
       <section className="mt-12">
         <h2 className="text-2xl text-black font-bold mb-4">Comments</h2>
-        {recipe.comments?.length === 0 ? (
+
+        {comments.length === 0 ? (
           <p className="text-gray-500">No comments yet.</p>
         ) : (
           <div className="space-y-4">
-            {recipe.comments.map((c) => (
+            {comments.map((c) => (
               <div key={c.id} className="border-b pb-2">
                 <p className="font-semibold text-orange-500">{c.author?.name ?? "Anonyme"}</p>
                 <p className="text-gray-700">{c.content}</p>
-                <p className="text-xs text-gray-400">{new Date(c.createdAt).toLocaleDateString()}</p>
+                <p className="text-xs text-gray-400">
+                  {new Date(c.createdAt).toLocaleDateString()}
+                </p>
               </div>
             ))}
           </div>
@@ -256,10 +445,13 @@ export default function RecipeDetailPage() {
             <textarea
               placeholder="Write a comment..."
               value={newComment}
-              onChange={(e) => setNewComment(e.target.value)}
+              onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setNewComment(e.target.value)}
               className="border p-2 text-gray-700 rounded w-full"
             />
-            <button type="submit" className="bg-orange-500 text-white px-4 py-2 rounded hover:bg-orange-600">
+            <button
+              type="submit"
+              className="bg-orange-500 text-white px-4 py-2 rounded hover:bg-orange-600"
+            >
               Post Comment
             </button>
           </form>
@@ -268,8 +460,8 @@ export default function RecipeDetailPage() {
         )}
       </section>
 
-      {/* ✅ 4 recettes aléatoires ici */}
-      {Number.isFinite(recipeId) && <RandomRecipes currentId={recipeId!} />}
+      {/* 4 recettes aléatoires */}
+      {Number.isFinite(recipeId) && <RandomRecipes currentId={recipeId} />}
     </main>
   );
 }

@@ -1,108 +1,348 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import React, { useEffect, useRef, useState } from "react";
 import Image from "next/image";
+import Link from "next/link";
+import { FaSearch, FaPlay, FaTimes } from "react-icons/fa";
+import { motion, AnimatePresence } from "framer-motion";
+import LikeButton from "@/components/LikeButton";
+import Navbar from "@/components/Navbar";
+import { apiPath } from "@/lib/api";
 
-interface Recipe {
+// Types (payload API minimal)
+type RecipeApiItem = {
   id: number;
   title: string;
+  imageUrl: string | null;
+  author?: { name: string | null };
+  _count?: { favorites: number; comments: number };
+};
+
+// Props de la carte affichée
+type RecipeCardProps = {
+  id: number;
   imageUrl: string;
-}
+  title: string;
+  rating: string; // on affiche le nombre de favoris en "rating"
+  author: { name: string | null };
+};
 
-export default function RecipesPage() {
-  const router = useRouter();
+const RecipeCard: React.FC<RecipeCardProps> = ({ id, imageUrl, title, rating, author }) => (
+  <Link href={`/recipes/${id}`} className="block">
+    <div className="relative bg-white shadow-lg rounded-lg overflow-hidden hover:bg-gray-100 cursor-pointer w-[300px] h-[300px]">
+      <div className="relative w-full h-40">
+        <Image src={imageUrl} alt={title} fill className="object-cover" priority />
+      </div>
+      <LikeButton
+        recipeId={id}
+        className="absolute top-2 right-2 bg-black bg-opacity-40 rounded-full p-2"
+      />
+      <div className="p-4">
+        <h3 className="text-lg font-semibold text-gray-800">{title}</h3>
+        <p className="text-orange-500 font-medium">⭐ {rating}</p>
+        <p className="text-gray-600">by {author?.name ?? "Anonyme"}</p>
+      </div>
+    </div>
+  </Link>
+);
 
-  const [recipes, setRecipes] = useState<Recipe[]>([]);
-  const [randomRecipe, setRandomRecipe] = useState<Recipe | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+const Banner = () => (
+  <div
+    className="relative h-[500px] bg-cover bg-top flex items-center text-white text-left rounded-xl overflow-hidden mx-5 p-5 mt-20"
+    style={{ backgroundImage: "url('/images/banniere.png')" }}
+  >
+    <div className="absolute inset-0 bg-black opacity-40 rounded-xl"></div>
+    <div className="relative max-w-xl">
+      <h1 className="text-5xl font-bold leading-tight">Choose from thousands of recipes</h1>
+      <p className="mt-4 text-lg">
+        Appropriately integrate technically sound value with scalable infomediaries negotiate
+        sustainable strategic theme areas
+      </p>
+      <a
+        href="/auth/sign-in"
+        className="bg-orange-500 px-6 py-3 rounded-lg mt-4 inline-block text-white font-semibold"
+      >
+        Sign up today →
+      </a>
+    </div>
+  </div>
+);
 
-  // Charger toutes les recettes au départ
+const Sidebar = () => {
+  const [isOpen, setIsOpen] = useState(false);
+  return (
+    <aside className="bg-white p-6 rounded-lg w-64 flex-row">
+      <h2 className="text-3xl font-bold mb-6 text-gray-950">Recipes</h2>
+      <button
+        className="w-full text-left font-bold text-gray-800 flex justify-between items-center"
+        onClick={() => setIsOpen(!isOpen)}
+      >
+        Dish Type <span>{isOpen ? "-" : "+"}</span>
+      </button>
+      {isOpen && (
+        <ul className="mt-3 space-y-3 text-gray-700">
+          {["Appetizers", "Bread", "Cake", "Casserole", "Main Dishes", "Pasta"].map((cat) => (
+            <li key={cat}>
+              <a href="#" className="hover:text-orange-500">
+                {cat}
+              </a>
+            </li>
+          ))}
+        </ul>
+      )}
+    </aside>
+  );
+};
+
+const SearchBar = ({
+  search,
+  onSearchChange,
+}: {
+  search: string;
+  onSearchChange: (v: string) => void;
+}) => (
+  <div className="w-full flex justify-between items-center bg-white shadow-md rounded-lg p-4 mt-10 max-w-7xl mx-auto">
+    <input
+      type="text"
+      className="w-full px-4 py-2 outline-none border-none text-black"
+      placeholder="Search for recipes..."
+      value={search}
+      onChange={(e) => onSearchChange(e.target.value)}
+    />
+    <button className="bg-orange-500 p-3 text-white rounded-lg" aria-label="Search">
+      <FaSearch />
+    </button>
+  </div>
+);
+
+const Pagination = ({
+  currentPage,
+  totalPages,
+  onPageChange,
+}: {
+  currentPage: number;
+  totalPages: number;
+  onPageChange: (page: number) => void;
+}) => (
+  <div className="flex justify-center mt-10 space-x-2">
+    <button
+      onClick={() => onPageChange(currentPage - 1)}
+      disabled={currentPage === 1}
+      className="px-3 py-1 bg-gray-200 text-black rounded hover:bg-orange-500 hover:text-white disabled:opacity-50"
+    >
+      «
+    </button>
+    {Array.from({ length: totalPages }, (_, i) => i + 1).map((n) => (
+      <button
+        key={n}
+        onClick={() => onPageChange(n)}
+        className={`px-3 py-1 rounded ${
+          n === currentPage ? "bg-orange-500 text-white" : "bg-gray-100 hover:bg-orange-500 hover:text-white"
+        }`}
+      >
+        {n}
+      </button>
+    ))}
+    <button
+      onClick={() => onPageChange(currentPage + 1)}
+      disabled={currentPage === totalPages}
+      className="px-3 py-1 bg-gray-200 text-black rounded hover:bg-orange-500 hover:text-white disabled:opacity-50"
+    >
+      »
+    </button>
+  </div>
+);
+
+const VideoSection = () => {
+  const videos = [
+    { src: "/videos/video1.mp4", title: "Cooking with Tomatoes" },
+    { src: "/videos/video2.mp4", title: "Dessert in 5 minutes" },
+    { src: "/videos/video3.mp4", title: "Healthy Breakfast Ideas" },
+    { src: "/videos/video4.mp4", title: "Dinner for Two" },
+  ];
+  const [modalVideo, setModalVideo] = useState<string | null>(null);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+
   useEffect(() => {
-    const loadRecipes = async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/recipes`);
-        const data = await res.json();
-        const list = Array.isArray(data.recipes) ? data.recipes : [];
-        if (list.length === 0) {
-          setError("Aucune recette disponible.");
-          setLoading(false);
-          return;
-        }
-        setRecipes(list);
-        pickRandom(list);
-      } catch (err) {
-        console.error("❌ Error fetching recipes:", err);
-        setError("Erreur de chargement des recettes.");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadRecipes();
-  }, []);
-
-  // Choisir aléatoirement
-  const pickRandom = (list: Recipe[]) => {
-    const index = Math.floor(Math.random() * list.length);
-    setRandomRecipe(list[index]);
-  };
-
-  const handleAnotherRecipe = () => {
-    if (recipes.length > 0) {
-      pickRandom(recipes);
+    if (modalVideo && videoRef.current) {
+      videoRef.current.volume = 0.2;
+      void videoRef.current.play().catch(() => {});
     }
-  };
-
-  const handleViewRecipe = () => {
-    if (randomRecipe) {
-      router.push(`/recipes/${randomRecipe.id}`);
-    }
-  };
+  }, [modalVideo]);
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-orange-50 px-6 py-12">
-      <h1 className="text-4xl font-bold mb-4 text-orange-600">🍳 Surprise Recipe!</h1>
-      
-      {loading && (
-        <p className="text-gray-600 text-lg">Chargement d&apos;une recette surprise…</p>
-      )}
-
-      {error && (
-        <p className="text-red-500 text-lg">{error}</p>
-      )}
-
-      {!loading && randomRecipe && (
-        <div className="bg-white shadow-lg rounded-lg p-6 text-center max-w-md w-full">
-         <Image
-            src={randomRecipe.imageUrl}
-            alt={randomRecipe.title}
-            width={600}
-            height={400}
-            className="w-full h-60 object-cover rounded mb-4"
+    <section className="max-w-7xl mx-auto mt-12 px-9">
+      <h2 className="text-3xl font-bold mb-6 text-gray-950">Videos</h2>
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+        {videos.map((video, index) => (
+          <div
+            key={index}
+            className="relative rounded-xl overflow-hidden shadow-xl group cursor-pointer"
+            onClick={() => setModalVideo(video.src)}
+          >
+            <video
+              src={video.src}
+              preload="metadata"
+              className="w-full h-48 object-cover pointer-events-none brightness-90 group-hover:brightness-75 transition duration-300"
+              muted
+              playsInline
             />
-          <h2 className="text-2xl font-semibold mb-4 text-gray-800">
-            {randomRecipe.title}
-          </h2>
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="bg-black bg-opacity-40 rounded-full p-3 group-hover:bg-opacity-70 transition">
+                <FaPlay className="text-white text-2xl" />
+              </div>
+            </div>
+            <div className="absolute bottom-0 w-full bg-gradient-to-t from-black to-transparent text-white p-3 text-sm font-semibold truncate">
+              {video.title}
+            </div>
+          </div>
+        ))}
+      </div>
 
-          <button
-            onClick={handleViewRecipe}
-            className="bg-orange-500 text-white px-6 py-2 rounded-lg shadow hover:bg-orange-600 transition mb-3 w-full"
+      <AnimatePresence>
+        {modalVideo && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50"
           >
-            Voir cette recette
-          </button>
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="relative w-full max-w-3xl p-4"
+            >
+              <button onClick={() => setModalVideo(null)} className="absolute top-2 right-2 text-white text-xl">
+                <FaTimes />
+              </button>
+              <motion.video
+                ref={videoRef}
+                key={modalVideo}
+                src={modalVideo ?? undefined}
+                controls
+                autoPlay
+                className="w-full rounded-lg shadow-lg"
+              />
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </section>
+  );
+};
 
-          <button
-            onClick={handleAnotherRecipe}
-            className="border border-orange-500 text-orange-500 px-6 py-2 rounded-lg hover:bg-orange-50 transition w-full"
-          >
-            Une autre recette ?
-          </button>
+const Page: React.FC = () => {
+  const [recipes, setRecipes] = useState<RecipeCardProps[]>([]);
+  const [search, setSearch] = useState<string>("");
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [totalPages] = useState<number>(1);
+
+  // fetch + debounce sur la recherche
+  useEffect(() => {
+    const ctrl = new AbortController();
+    const t = setTimeout(() => {
+      (async () => {
+        try {
+          const q = search.trim();
+          const url = apiPath(`/api/recipes${q ? `?q=${encodeURIComponent(q)}` : ""}`);
+          const res = await fetch(url, { cache: "no-store", signal: ctrl.signal, credentials: "include" });
+          if (!res.ok) {
+            setRecipes([]);
+            return;
+          }
+          const data: unknown = await res.json().catch(() => null);
+
+          const list: RecipeCardProps[] = Array.isArray(data)
+            ? (data as RecipeApiItem[]).map((r) => {
+                const favs = typeof r._count?.favorites === "number" ? r._count!.favorites : 0;
+                return {
+                  id: r.id,
+                  title: r.title,
+                  imageUrl: r.imageUrl ?? "/images/placeholder.jpg",
+                  author: { name: r.author?.name ?? null },
+                  rating: String(favs),
+                };
+              })
+            : [];
+
+          setRecipes(list);
+        } catch {
+          setRecipes([]);
+        }
+      })();
+    }, 250);
+
+    return () => {
+      clearTimeout(t);
+      ctrl.abort();
+    };
+  }, [search]);
+
+  // chargement initial (équivalent à search="")
+  useEffect(() => {
+    const run = async (): Promise<void> => {
+      try {
+        const res = await fetch(apiPath("/api/recipes"), {
+          cache: "no-store",
+          credentials: "include",
+        });
+        if (!res.ok) {
+          setRecipes([]);
+          return;
+        }
+        const data: unknown = await res.json().catch(() => null);
+        const list: RecipeCardProps[] = Array.isArray(data)
+          ? (data as RecipeApiItem[]).map((r) => {
+              const favs = typeof r._count?.favorites === "number" ? r._count!.favorites : 0;
+              return {
+                id: r.id,
+                title: r.title,
+                imageUrl: r.imageUrl ?? "/images/placeholder.jpg",
+                author: { name: r.author?.name ?? null },
+                rating: String(favs),
+              };
+            })
+          : [];
+        setRecipes(list);
+      } catch {
+        setRecipes([]);
+      }
+    };
+    void run();
+  }, []);
+
+  return (
+    <div>
+      <Navbar />
+      <Banner />
+      <SearchBar search={search} onSearchChange={setSearch} />
+      <div className="container mx-auto py-10">
+        <div className="flex gap-6 mt-6 max-w-7xl mx-auto">
+          <Sidebar />
+          <div className="flex-1">
+            {recipes.length === 0 ? (
+              <div className="text-center text-gray-500 text-lg py-10">No recipes found.</div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                {recipes.map((r) => (
+                  <RecipeCard key={r.id} {...r} />
+                ))}
+              </div>
+            )}
+            {totalPages > 1 && (
+              <Pagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                onPageChange={setCurrentPage}
+              />
+            )}
+          </div>
         </div>
-      )}
+      </div>
+      <VideoSection />
     </div>
   );
-}
+};
+
+export default Page;

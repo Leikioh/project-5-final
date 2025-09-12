@@ -7,74 +7,116 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/app/context/AuthContext";
 
 const AuthPage: React.FC = () => {
-  const [isSignUp, setIsSignUp] = useState(false);
-  const [email, setEmail] = useState("");
-  const [name, setName] = useState("");
-  const [password, setPassword] = useState("");
-  const [confirm, setConfirm] = useState("");
+  const [isSignUp, setIsSignUp] = useState<boolean>(false);
+  const [email, setEmail] = useState<string>("");
+  const [name, setName] = useState<string>("");
+  const [password, setPassword] = useState<string>("");
+  const [confirm, setConfirm] = useState<string>("");
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState<boolean>(false);
+
   const { login } = useAuth();
   const router = useRouter();
 
-  const resetForm = () => {
+  const resetForm = (): void => {
     setEmail("");
     setName("");
     setPassword("");
     setConfirm("");
   };
 
-  const handleLogin = async (e: React.FormEvent) => {
+  async function handleLogin(e: React.FormEvent<HTMLFormElement>): Promise<void> {
     e.preventDefault();
+    setError(null);
     if (!email || !password) return;
+
+    setLoading(true);
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/login`, {
+      const res = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email: email.trim().toLowerCase(), password }),
       });
 
       if (!res.ok) {
-        alert("Identifiants incorrects");
-        return;
+        const payload: unknown = await res.json().catch(() => null);
+        const message =
+          payload && typeof payload === "object" && payload !== null && "error" in payload
+            ? String((payload as { error?: unknown }).error ?? "Identifiants incorrects")
+            : "Identifiants incorrects";
+        throw new Error(message);
       }
 
-      await login(); // Récupère /me
+      await login();          // hydrate /me dans ton contexte
       resetForm();
       router.push("/recipes");
-    } catch (err) {
-      console.error(err);
-      alert("Erreur lors de la connexion");
+      router.refresh();
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Erreur lors de la connexion");
+    } finally {
+      setLoading(false);
     }
-  };
+  }
 
-  const handleSignup = async (e: React.FormEvent) => {
+  async function handleSignup(e: React.FormEvent<HTMLFormElement>): Promise<void> {
     e.preventDefault();
+    setError(null);
+
     if (password !== confirm) {
-      alert("Les mots de passe ne correspondent pas");
+      setError("Les mots de passe ne correspondent pas.");
       return;
     }
 
+    setLoading(true);
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/register`, {
+      const res = await fetch("/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ email, password, name }),
+        body: JSON.stringify({
+          email: email.trim().toLowerCase(),
+          password,
+          name: name || null,
+        }),
       });
 
       if (!res.ok) {
-        alert("Impossible de créer le compte");
-        return;
+        const payload: unknown = await res.json().catch(() => null);
+        const message =
+          payload && typeof payload === "object" && payload !== null && "error" in payload
+            ? String((payload as { error?: unknown }).error ?? "Impossible de créer le compte")
+            : "Impossible de créer le compte";
+        throw new Error(message);
       }
 
-      await login(); // Connecte automatiquement
+      // connexion automatique (ou laisse ton flow tel quel si tu préfères)
+      const resLogin = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ email: email.trim().toLowerCase(), password }),
+      });
+
+      if (!resLogin.ok) {
+        const payload: unknown = await resLogin.json().catch(() => null);
+        const message =
+          payload && typeof payload === "object" && payload !== null && "error" in payload
+            ? String((payload as { error?: unknown }).error ?? "Connexion automatique impossible")
+            : "Connexion automatique impossible";
+        throw new Error(message);
+      }
+
+      await login();
       resetForm();
       router.push("/recipes");
-    } catch (err) {
-      console.error(err);
-      alert("Erreur lors de l’inscription");
+      router.refresh();
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Erreur lors de l’inscription");
+    } finally {
+      setLoading(false);
     }
-  };
+  }
 
   return (
     <div className="min-h-screen flex bg-white">
@@ -91,6 +133,7 @@ const AuthPage: React.FC = () => {
             <h2 className="text-3xl font-bold mb-6 text-orange-500 text-center">
               {isSignUp ? "Créer un compte" : "Connexion"}
             </h2>
+
             <form
               onSubmit={isSignUp ? handleSignup : handleLogin}
               className="flex flex-col gap-5"
@@ -100,43 +143,61 @@ const AuthPage: React.FC = () => {
                   type="text"
                   placeholder="Nom d'utilisateur"
                   value={name}
-                  onChange={(e) => setName(e.target.value)}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setName(e.target.value)}
                   className="px-4 py-3 rounded-lg border text-black border-gray-300 focus:outline-none focus:ring-2 focus:ring-orange-500"
+                  autoComplete="name"
                 />
               )}
+
               <input
                 type="email"
                 placeholder="Adresse email"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEmail(e.target.value)}
                 className="px-4 py-3 rounded-lg border text-black border-gray-300 focus:outline-none focus:ring-2 focus:ring-orange-500"
+                autoComplete="email"
                 required
               />
+
               <input
                 type="password"
                 placeholder="Mot de passe"
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)}
                 className="px-4 py-3 rounded-lg border text-black border-gray-300 focus:outline-none focus:ring-2 focus:ring-orange-500"
+                autoComplete={isSignUp ? "new-password" : "current-password"}
                 required
               />
+
               {isSignUp && (
                 <input
                   type="password"
                   placeholder="Confirmer le mot de passe"
                   value={confirm}
-                  onChange={(e) => setConfirm(e.target.value)}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setConfirm(e.target.value)}
                   className="px-4 py-3 rounded-lg border text-black border-gray-300 focus:outline-none focus:ring-2 focus:ring-orange-500"
+                  autoComplete="new-password"
                   required
                 />
               )}
+
+              {error && <p className="text-sm text-red-600 -mt-2">{error}</p>}
+
               <button
                 type="submit"
-                className="bg-orange-500 hover:bg-orange-600 text-white font-semibold py-3 px-5 rounded-lg transition"
+                disabled={loading}
+                className="bg-orange-500 hover:bg-orange-600 text-white font-semibold py-3 px-5 rounded-lg transition disabled:opacity-60 disabled:cursor-not-allowed"
               >
-                {isSignUp ? "S’inscrire" : "Se connecter"}
+                {loading
+                  ? isSignUp
+                    ? "Création du compte..."
+                    : "Connexion..."
+                  : isSignUp
+                    ? "S’inscrire"
+                    : "Se connecter"}
               </button>
             </form>
+
             <p className="mt-6 text-sm text-gray-600 text-center">
               {isSignUp ? (
                 <>
@@ -174,6 +235,7 @@ const AuthPage: React.FC = () => {
             className="object-cover rounded-3xl brightness-90"
             priority
           />
+
           {!isSignUp && (
             <motion.div
               className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-t from-white/90 to-white/50 p-12 rounded-2xl"

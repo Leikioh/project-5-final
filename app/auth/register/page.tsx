@@ -6,33 +6,72 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 
 const RegisterPage: React.FC = () => {
-  const [email, setEmail]           = useState("");
-  const [password, setPassword]     = useState("");
-  const [confirmPassword, setConfirm] = useState("");
-  const router                      = useRouter();
+  const [email, setEmail] = useState<string>("");
+  const [password, setPassword] = useState<string>("");
+  const [confirmPassword, setConfirm] = useState<string>("");
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState<boolean>(false);
+  const router = useRouter();
 
-  const handleSignup = async (e: React.FormEvent) => {
+  const handleSignup = async (e: React.FormEvent<HTMLFormElement>): Promise<void> => {
     e.preventDefault();
+    setError(null);
+
     if (password !== confirmPassword) {
-      alert("Les mots de passe ne correspondent pas");
+      setError("Les mots de passe ne correspondent pas.");
       return;
     }
+
+    setLoading(true);
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/register`, {
+      // 1) Création du compte
+      const res = await fetch("/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
+        credentials: "include",
+        body: JSON.stringify({
+          email: email.trim().toLowerCase(),
+          password,
+        }),
       });
+
       if (!res.ok) {
-        const err = await res.json();
-        alert(err.error || "Impossible de créer le compte");
-        return;
+        // on essaye de lire un message d’erreur côté API
+        const payload: unknown = await res.json().catch(() => null);
+        const message =
+          payload && typeof payload === "object" && payload !== null && "error" in payload
+            ? String((payload as { error?: unknown }).error ?? "Inscription impossible")
+            : "Inscription impossible";
+        throw new Error(message);
       }
-      alert("Inscription réussie ! Vous pouvez maintenant vous connecter.");
-      router.push("/auth/sign-in");
-    } catch (err) {
-      console.error(err);
-      alert("Erreur lors de l’inscription");
+
+      // 2) Connexion automatique
+      const resLogin = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          email: email.trim().toLowerCase(),
+          password,
+        }),
+      });
+
+      if (!resLogin.ok) {
+        const payload: unknown = await resLogin.json().catch(() => null);
+        const message =
+          payload && typeof payload === "object" && payload !== null && "error" in payload
+            ? String((payload as { error?: unknown }).error ?? "Connexion automatique impossible")
+            : "Connexion automatique impossible";
+        throw new Error(message);
+      }
+
+      // 3) Redirection + refresh pour que le SSR voie le cookie
+      router.push("/");
+      router.refresh();
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Erreur lors de l’inscription");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -49,38 +88,49 @@ const RegisterPage: React.FC = () => {
             <h2 className="text-3xl font-bold mb-6 text-orange-500 text-center">
               Créer un compte
             </h2>
+
             <form onSubmit={handleSignup} className="flex flex-col gap-5">
               <input
                 type="email"
                 placeholder="Adresse email"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEmail(e.target.value)}
                 className="px-4 py-3 rounded-lg border text-black border-gray-300 focus:outline-none focus:ring-2 focus:ring-orange-500"
+                autoComplete="email"
                 required
               />
+
               <input
                 type="password"
                 placeholder="Mot de passe"
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)}
                 className="px-4 py-3 rounded-lg border text-black border-gray-300 focus:outline-none focus:ring-2 focus:ring-orange-500"
+                autoComplete="new-password"
                 required
               />
+
               <input
                 type="password"
                 placeholder="Confirmer le mot de passe"
                 value={confirmPassword}
-                onChange={(e) => setConfirm(e.target.value)}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setConfirm(e.target.value)}
                 className="px-4 py-3 rounded-lg border text-black border-gray-300 focus:outline-none focus:ring-2 focus:ring-orange-500"
+                autoComplete="new-password"
                 required
               />
+
+              {error && <p className="text-sm text-red-600 -mt-2">{error}</p>}
+
               <button
                 type="submit"
-                className="bg-orange-500 hover:bg-orange-600 text-white font-semibold py-3 px-5 rounded-lg transition"
+                disabled={loading}
+                className="bg-orange-500 hover:bg-orange-600 text-white font-semibold py-3 px-5 rounded-lg transition disabled:opacity-60 disabled:cursor-not-allowed"
               >
-                S’inscrire
+                {loading ? "Création du compte..." : "S’inscrire"}
               </button>
             </form>
+
             <p className="mt-6 text-sm text-gray-600 text-center">
               Vous avez déjà un compte ?{" "}
               <button
@@ -115,7 +165,7 @@ const RegisterPage: React.FC = () => {
             </p>
             <button
               onClick={() => router.push("/auth/sign-in")}
-              className="bg-white text-black shadow-lg px-8 py-3 rounded-xl font-semibold hover:bg-orange-600 transition"
+              className="bg-white text-black shadow-lg px-8 py-3 rounded-xl font-semibold hover:bg-orange-600 hover:text-white transition"
             >
               Déjà inscrit ? Connexion
             </button>
