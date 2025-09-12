@@ -30,23 +30,40 @@ type RecipesResponse =
 /* ── Petits composants UI ──────────────────────────────────────────────── */
 
 const Banner = () => (
-  <div
-    className="relative h-[500px] bg-cover bg-top flex items-center text-white text-left rounded-xl overflow-hidden mx-5 p-5 mt-20"
-    style={{ backgroundImage: "url('/images/banniere.png')" }}
-  >
-    <div className="absolute inset-0 bg-black opacity-40 rounded-xl" />
-    <div className="relative max-w-xl">
-      <h1 className="text-5xl font-bold leading-tight">Choose from thousands of recipes</h1>
-      <p className="mt-4 text-lg">
-        Appropriately integrate technically sound value with scalable infomediaries negotiate
-        sustainable strategic theme areas
-      </p>
-      <a
-        href="/auth/sign-in"
-        className="bg-orange-500 px-6 py-3 rounded-lg mt-4 inline-block text-white font-semibold"
-      >
-        Sign up today →
-      </a>
+  <div className="relative mx-5 mt-20 rounded-xl overflow-hidden">
+    {/* hauteur réduite et responsive */}
+    <div className="relative h-[240px] md:h-[280px] lg:h-[420px]">
+      {/* image plein cadre */}
+      <Image
+        src="/images/banner_full_2560x1080.jpg"
+        alt="Cooking in a cozy modern kitchen"
+        fill
+        priority
+        className="object-cover"
+        sizes="100vw"
+      />
+
+      {/* overlay pour lisibilité du texte */}
+      <div className="absolute inset-0 bg-gradient-to-r from-black/60 via-black/30 to-transparent" />
+
+      {/* contenu */}
+      <div className="absolute inset-y-0 left-0 flex items-center">
+        <div className="px-5 md:px-10 max-w-xl text-white">
+          <h1 className="text-4xl md:text-5xl font-bold leading-tight">
+            Choose from thousands of recipes
+          </h1>
+          <p className="mt-4 text-base md:text-lg">
+            Appropriately integrate technically sound value with scalable
+            infomediaries negotiate sustainable strategic theme areas
+          </p>
+          <Link
+            href="/auth/sign-in"
+            className="inline-block bg-orange-500 hover:bg-orange-600 px-6 py-3 rounded-lg mt-4 font-semibold"
+          >
+            Sign up today →
+          </Link>
+        </div>
+      </div>
     </div>
   </div>
 );
