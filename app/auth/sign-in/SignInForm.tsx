@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/app/context/AuthContext";
 
 export default function SignInForm(): JSX.Element {
+  const [name, setName] = useState<string>(""); // <-- nouveau (optionnel)
   const [email, setEmail] = useState<string>("");
   const [password, setPassword] = useState<string>("");
   const [error, setError] = useState<string | null>(null);
@@ -14,6 +15,7 @@ export default function SignInForm(): JSX.Element {
   const router = useRouter();
 
   const resetForm = (): void => {
+    setName("");
     setEmail("");
     setPassword("");
   };
@@ -28,7 +30,10 @@ export default function SignInForm(): JSX.Element {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ email: email.trim().toLowerCase(), password }),
+        body: JSON.stringify({
+          email: email.trim().toLowerCase(),
+          password, // le backend n'utilise pas `name` pour la connexion — c'est purement UI ici
+        }),
       });
 
       if (!res.ok) {
@@ -40,7 +45,7 @@ export default function SignInForm(): JSX.Element {
         throw new Error(message);
       }
 
-      await login();      // hydrate /auth/me dans ton contexte
+      await login();
       resetForm();
       router.push("/recipes");
       router.refresh();
@@ -53,21 +58,32 @@ export default function SignInForm(): JSX.Element {
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+      {/* Champ optionnel pour rester cohérent avec ta page sign-in */}
+      <input
+        type="text"
+        placeholder="Nom d'utilisateur (optionnel)"
+        value={name}
+        onChange={(e: React.ChangeEvent<HTMLInputElement>) => setName(e.target.value)}
+        className="px-4 py-2 border rounded text-black"
+        autoComplete="username"
+      />
+
       <input
         type="email"
         placeholder="Email"
         value={email}
         onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEmail(e.target.value)}
-        className="px-4 py-2 border rounded"
+        className="px-4 py-2 border rounded text-black"
         autoComplete="email"
         required
       />
+
       <input
         type="password"
         placeholder="Mot de passe"
         value={password}
         onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)}
-        className="px-4 py-2 border rounded"
+        className="px-4 py-2 border rounded text-black"
         autoComplete="current-password"
         required
       />

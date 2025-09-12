@@ -6,6 +6,7 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 
 const RegisterPage: React.FC = () => {
+  const [name, setName] = useState<string>("");            // <-- nouveau
   const [email, setEmail] = useState<string>("");
   const [password, setPassword] = useState<string>("");
   const [confirmPassword, setConfirm] = useState<string>("");
@@ -32,11 +33,11 @@ const RegisterPage: React.FC = () => {
         body: JSON.stringify({
           email: email.trim().toLowerCase(),
           password,
+          name: name.trim() || null, // <-- envoi du nom (optionnel)
         }),
       });
 
       if (!res.ok) {
-        // on essaye de lire un message d’erreur côté API
         const payload: unknown = await res.json().catch(() => null);
         const message =
           payload && typeof payload === "object" && payload !== null && "error" in payload
@@ -65,7 +66,7 @@ const RegisterPage: React.FC = () => {
         throw new Error(message);
       }
 
-      // 3) Redirection + refresh pour que le SSR voie le cookie
+      // 3) Redirection + refresh
       router.push("/");
       router.refresh();
     } catch (err: unknown) {
@@ -90,6 +91,16 @@ const RegisterPage: React.FC = () => {
             </h2>
 
             <form onSubmit={handleSignup} className="flex flex-col gap-5">
+              {/* Champ nom d'utilisateur (optionnel) */}
+              <input
+                type="text"
+                placeholder="Nom d'utilisateur (optionnel)"
+                value={name}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setName(e.target.value)}
+                className="px-4 py-3 rounded-lg border text-black border-gray-300 focus:outline-none focus:ring-2 focus:ring-orange-500"
+                autoComplete="username"
+              />
+
               <input
                 type="email"
                 placeholder="Adresse email"
