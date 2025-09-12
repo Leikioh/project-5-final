@@ -1,22 +1,32 @@
 "use client";
-import { useSession } from "next-auth/react";
+
+import React, { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { useCurrentUser } from "../hooks/useCurrentUser";
+
+export const dynamic = "force-dynamic"; // évite la pré-génération statique
 
 export default function ProfilePage() {
-  const { data: session, status } = useSession();
   const router = useRouter();
+  const { user, loading } = useCurrentUser();
 
   useEffect(() => {
-    if (status === "unauthenticated") router.push("/sign");
-  }, [status]);
+    if (!loading && !user) {
+      router.replace("/auth/sign-in");
+    }
+  }, [loading, user, router]);
 
-  if (status === "loading") return <p>Loading...</p>;
+  if (loading || !user) {
+    return <div className="py-10 text-center">Chargement…</div>;
+  }
 
   return (
-    <div className="p-10">
-      <h1 className="text-2xl font-bold">Welcome, {session?.user?.name} 👋</h1>
-      <p>Your email: {session?.user?.email}</p>
-    </div>
+    <main className="max-w-3xl mx-auto px-4 py-10">
+      <h1 className="text-3xl font-bold mb-6">Mon profil</h1>
+      <div className="bg-white shadow rounded p-6">
+        <p><span className="font-semibold">Nom :</span> {user.name ?? "—"}</p>
+        <p className="mt-2"><span className="font-semibold">Email :</span> {user.email}</p>
+      </div>
+    </main>
   );
 }
