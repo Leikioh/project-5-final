@@ -13,17 +13,23 @@ async function getUserId(): Promise<number | null> {
 
 export async function DELETE(
   _req: Request,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  { params }: any
+  { params }: { params: Promise<{ id: string }> }
 ) {
-  const userId = await getUserId();
-  if (!userId) return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
+  const { id: idParam } = await params;
+  const id = Number(idParam);
+  if (!Number.isFinite(id)) {
+    return NextResponse.json({ error: "ID invalide" }, { status: 400 });
+  }
 
-  const id = Number(params?.id);
-  if (!id) return NextResponse.json({ error: "ID invalide" }, { status: 400 });
+  const userId = await getUserId();
+  if (!userId) {
+    return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
+  }
 
   const comment = await prisma.comment.findUnique({ where: { id } });
-  if (!comment) return NextResponse.json({ error: "Introuvable" }, { status: 404 });
+  if (!comment) {
+    return NextResponse.json({ error: "Introuvable" }, { status: 404 });
+  }
   if (comment.authorId !== userId) {
     return NextResponse.json({ error: "Interdit" }, { status: 403 });
   }

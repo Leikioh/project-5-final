@@ -1,49 +1,40 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React from "react";
 import Image from "next/image";
 import Link from "next/link";
-import "tailwindcss/tailwind.css";
 import { FaSearch, FaPlay, FaTimes } from "react-icons/fa";
 import { motion, AnimatePresence } from "framer-motion";
-import LikeButton from "@/components/LikeButton";
 import Navbar from "@/components/Navbar";
+import LikeButton from "@/components/LikeButton";
+import { apiPath } from "@/lib/api";
 
+/* ── Types ──────────────────────────────────────────────────────────────── */
 
-// Types
-interface Recipe {
+type Recipe = {
   id: number;
-  imageUrl: string;
+  imageUrl: string | null;
   title: string;
-  rating: string;
   author: { name: string | null };
-}
+};
 
-const RecipeCard: React.FC<Recipe> = ({ id, imageUrl, title, rating, author }) => (
-  <Link href={`/recipes/${id}`} className="block">
-    <div className="relative bg-white shadow-lg rounded-lg overflow-hidden hover:bg-gray-100 cursor-pointer w-[300px] h-[300px]">
-      <div className="relative w-full h-40">
-        <Image src={imageUrl} alt={title} fill className="object-cover" priority />
-      </div>
-      <LikeButton
-        recipeId={id}
-        className="absolute top-2 right-2 bg-black bg-opacity-40 rounded-full p-2"
-      />
-      <div className="p-4">
-        <h3 className="text-lg font-semibold text-gray-800">{title}</h3>
-        <p className="text-orange-500 font-medium">⭐ {rating}</p>
-        <p className="text-gray-600">by {author?.name ?? "Anonyme"}</p>
-      </div>
-    </div>
-  </Link>
-);
+type RecipesResponse =
+  | {
+      items: Recipe[];
+      total: number;
+      page: number;
+      pageCount: number;
+    }
+  | Recipe[];
+
+/* ── Petits composants UI ──────────────────────────────────────────────── */
 
 const Banner = () => (
   <div
     className="relative h-[500px] bg-cover bg-top flex items-center text-white text-left rounded-xl overflow-hidden mx-5 p-5 mt-20"
     style={{ backgroundImage: "url('/images/banniere.png')" }}
   >
-    <div className="absolute inset-0 bg-black opacity-40 rounded-xl"></div>
+    <div className="absolute inset-0 bg-black opacity-40 rounded-xl" />
     <div className="relative max-w-xl">
       <h1 className="text-5xl font-bold leading-tight">Choose from thousands of recipes</h1>
       <p className="mt-4 text-lg">
@@ -61,13 +52,13 @@ const Banner = () => (
 );
 
 const Sidebar = () => {
-  const [isOpen, setIsOpen] = useState(false);
+  const [isOpen, setIsOpen] = React.useState(false);
   return (
     <aside className="bg-white p-6 rounded-lg w-64 flex-row">
       <h2 className="text-3xl font-bold mb-6 text-gray-950">Recipes</h2>
       <button
         className="w-full text-left font-bold text-gray-800 flex justify-between items-center"
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={() => setIsOpen((v) => !v)}
       >
         Dish Type <span>{isOpen ? "-" : "+"}</span>
       </button>
@@ -86,79 +77,91 @@ const Sidebar = () => {
   );
 };
 
-const SearchBar = ({
-  search,
-  onSearchChange,
+function SearchBar({
+  value,
+  onChange,
+  onSubmit,
 }: {
-  search: string;
-  onSearchChange: (v: string) => void;
-}) => (
-  <div className="w-full flex justify-between items-center bg-white shadow-md rounded-lg p-4 mt-10 max-w-7xl mx-auto">
-    <input
-      type="text"
-      className="w-full px-4 py-2 outline-none border-none text-black"
-      placeholder="Search for recipes..."
-      value={search}
-      onChange={(e) => onSearchChange(e.target.value)}
-    />
-    <button className="bg-orange-500 p-3 text-white rounded-lg">
-      <FaSearch />
-    </button>
-  </div>
-);
-
-const Pagination = ({
-  currentPage,
-  totalPages,
-  onPageChange,
-}: {
-  currentPage: number;
-  totalPages: number;
-  onPageChange: (page: number) => void;
-}) => (
-  <div className="flex justify-center mt-10 space-x-2">
-    <button
-      onClick={() => onPageChange(currentPage - 1)}
-      disabled={currentPage === 1}
-      className="px-3 py-1 bg-gray-200 text-black rounded hover:bg-orange-500 hover:text-white disabled:opacity-50"
-    >
-      «
-    </button>
-    {Array.from({ length: totalPages }, (_, i) => i + 1).map((n) => (
-      <button
-        key={n}
-        onClick={() => onPageChange(n)}
-        className={`px-3 py-1 rounded ${
-          n === currentPage ? "bg-orange-500 text-white" : "bg-gray-100 hover:bg-orange-500 hover:text-white"
-        }`}
-      >
-        {n}
+  value: string;
+  onChange: (v: string) => void;
+  onSubmit: () => void;
+}) {
+  return (
+    <div className="w-full flex justify-between items-center bg-white shadow-md rounded-lg p-4 mt-10 max-w-7xl mx-auto">
+      <input
+        type="text"
+        className="w-full px-4 py-2 outline-none border-none text-black"
+        placeholder="Search for recipes..."
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") onSubmit();
+        }}
+      />
+      <button onClick={onSubmit} className="bg-orange-500 p-3 text-white rounded-lg">
+        <FaSearch />
       </button>
-    ))}
-    <button
-      onClick={() => onPageChange(currentPage + 1)}
-      disabled={currentPage === totalPages}
-      className="px-3 py-1 bg-gray-200 text-black rounded hover:bg-orange-500 hover:text-white disabled:opacity-50"
-    >
-      »
-    </button>
-  </div>
-);
+    </div>
+  );
+}
 
-const VideoSection = () => {
+function Pagination({
+  page,
+  pageCount,
+  onChange,
+}: {
+  page: number;
+  pageCount: number;
+  onChange: (p: number) => void;
+}) {
+  if (pageCount <= 1) return null;
+
+  const pages = Array.from({ length: pageCount }, (_, i) => i + 1);
+  return (
+    <div className="flex justify-center mt-10 space-x-2">
+      <button
+        onClick={() => onChange(Math.max(1, page - 1))}
+        disabled={page === 1}
+        className="px-3 py-1 bg-gray-200 text-black rounded hover:bg-orange-500 hover:text-white disabled:opacity-50"
+      >
+        «
+      </button>
+      {pages.map((n) => (
+        <button
+          key={n}
+          onClick={() => onChange(n)}
+          className={`px-3 py-1 rounded ${
+            n === page ? "bg-orange-500 text-white" : "bg-gray-100 hover:bg-orange-500 hover:text-white"
+          }`}
+        >
+          {n}
+        </button>
+      ))}
+      <button
+        onClick={() => onChange(Math.min(pageCount, page + 1))}
+        disabled={page === pageCount}
+        className="px-3 py-1 bg-gray-200 text-black rounded hover:bg-orange-500 hover:text-white disabled:opacity-50"
+      >
+        »
+      </button>
+    </div>
+  );
+}
+
+function VideoSection() {
   const videos = [
     { src: "/videos/video1.mp4", title: "Cooking with Tomatoes" },
     { src: "/videos/video2.mp4", title: "Dessert in 5 minutes" },
     { src: "/videos/video3.mp4", title: "Healthy Breakfast Ideas" },
     { src: "/videos/video4.mp4", title: "Dinner for Two" },
   ];
-  const [modalVideo, setModalVideo] = useState<string | null>(null);
-  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const [modalVideo, setModalVideo] = React.useState<string | null>(null);
+  const videoRef = React.useRef<HTMLVideoElement | null>(null);
 
-  useEffect(() => {
+  React.useEffect(() => {
     if (modalVideo && videoRef.current) {
       videoRef.current.volume = 0.2;
-      videoRef.current.play().catch(() => {});
+      void videoRef.current.play().catch(() => {});
     }
   }, [modalVideo]);
 
@@ -222,59 +225,205 @@ const VideoSection = () => {
       </AnimatePresence>
     </section>
   );
-};
+}
 
-const Page: React.FC = () => {
-  const [recipes, setRecipes] = useState<Recipe[]>([]);
-  const [search, setSearch] = useState("");
-  const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages] = useState(1);
+/* 👉 NEW: Newsletter CTA (sous “Videos”) */
+function NewsletterCTA(): React.JSX.Element {
+  const [email, setEmail] = React.useState("");
+  const [status, setStatus] = React.useState<"idle" | "loading" | "success" | "error">("idle");
 
-  useEffect(() => {
-    const fetchRecipes = async () => {
+  const submit = (e: React.FormEvent<HTMLFormElement>): void => {
+    e.preventDefault();
+    const value = email.trim();
+    const valid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+    if (!valid) {
+      setStatus("error");
+      return;
+    }
+    setStatus("loading");
+
+    // 👉 Placeholder d’intégration : remplace par ton endpoint si besoin.
+    // ex: fetch(apiPath("/api/subscribe"), { method:"POST", body: JSON.stringify({ email:value }) })
+    setTimeout(() => {
+      setStatus("success");
+      setEmail("");
+    }, 600);
+  };
+
+  return (
+    <section className="max-w-6xl mx-auto mt-12 px-6">
+      <div className="bg-orange-500 rounded-2xl px-8 py-10 md:px-12 md:py-12 text-center shadow-lg">
+        <h3 className="text-white text-2xl md:text-3xl font-bold leading-snug">
+          Be the first to know about the latest deals,
+          <br className="hidden md:block" /> receive new trending recipes &amp; more!
+        </h3>
+
+        <form onSubmit={submit} className="mt-7 flex flex-col sm:flex-row items-center gap-3 sm:gap-4 justify-center">
+          <label htmlFor="newsletter-email" className="sr-only">
+            Email Address
+          </label>
+          <input
+            id="newsletter-email"
+            type="email"
+            value={email}
+            onChange={(e) => {
+              setEmail(e.target.value);
+              if (status !== "idle") setStatus("idle");
+            }}
+            placeholder="Email Address"
+            className="w-full sm:w-[380px] px-5 py-3 rounded-full bg-transparent border border-white/70 placeholder-white/90 text-white focus:outline-none focus:ring-2 focus:ring-white"
+            aria-invalid={status === "error"}
+            aria-describedby="newsletter-help"
+          />
+          <button
+            type="submit"
+            disabled={status === "loading"}
+            className="px-6 py-3 rounded-full bg-yellow-300 hover:bg-yellow-400 text-black font-semibold disabled:opacity-70 disabled:cursor-not-allowed"
+          >
+            {status === "loading" ? "Subscribing…" : "Subscribe"}
+          </button>
+        </form>
+
+        <div id="newsletter-help" className="mt-2 text-sm">
+          {status === "error" && <p className="text-white/90">Please enter a valid email.</p>}
+          {status === "success" && <p className="text-white/90">Thanks! You’re on the list ✅</p>}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* ── Page ───────────────────────────────────────────────────────────────── */
+
+export default function Page() {
+  const TAKE = 9;
+  const [page, setPage] = React.useState(1);
+  const [pageCount, setPageCount] = React.useState(1);
+
+  const [recipes, setRecipes] = React.useState<Recipe[]>([]);
+  const [loading, setLoading] = React.useState(true);
+  const [error, setError] = React.useState<string | null>(null);
+
+  const [search, setSearch] = React.useState("");
+  const lastSearchRef = React.useRef("");
+
+  const load = React.useCallback(
+    async (p: number, q: string) => {
+      setLoading(true);
+      setError(null);
+
+      const url = new URL(apiPath("/api/recipes"), window.location.origin);
+      url.searchParams.set("page", String(p));
+      url.searchParams.set("take", String(TAKE));
+      if (q.trim()) url.searchParams.set("q", q.trim());
+
       try {
-        const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/recipes`);
-        const data = await res.json();
-        setRecipes(Array.isArray(data.recipes) ? data.recipes : []);
-      } catch (err) {
-        console.error("❌ FETCH ERROR:", err);
+        const res = await fetch(url.toString(), { cache: "no-store", credentials: "include" });
+        if (!res.ok) {
+          const res2 = await fetch(apiPath("/api/recipes"), { cache: "no-store" });
+          const data2: RecipesResponse = await res2.json();
+          if (Array.isArray(data2)) {
+            const total = data2.length;
+            const pc = Math.max(1, Math.ceil(total / TAKE));
+            setPageCount(pc);
+            const start = (p - 1) * TAKE;
+            const items = data2.slice(start, start + TAKE);
+            setRecipes(items);
+          } else {
+            setRecipes(data2.items);
+            setPageCount(data2.pageCount);
+          }
+          return;
+        }
+
+        const data: RecipesResponse = await res.json();
+
+        if (Array.isArray(data)) {
+          const total = data.length;
+          const pc = Math.max(1, Math.ceil(total / TAKE));
+          setPageCount(pc);
+          const start = (p - 1) * TAKE;
+          const items = data.slice(start, start + TAKE);
+          setRecipes(items);
+        } else {
+          setRecipes(data.items);
+          setPageCount(Math.max(1, data.pageCount));
+        }
+      } catch {
+        setError("Erreur de chargement des recettes.");
         setRecipes([]);
+      } finally {
+        setLoading(false);
       }
-    };
-    fetchRecipes();
-  }, []);
+    },
+    [TAKE]
+  );
+
+  React.useEffect(() => {
+    void load(page, lastSearchRef.current);
+  }, [page, load]);
+
+  const triggerSearch = React.useCallback(() => {
+    lastSearchRef.current = search;
+    setPage(1);
+    void load(1, search);
+  }, [search, load]);
 
   return (
     <div>
       <Navbar />
       <Banner />
-      <SearchBar search={search} onSearchChange={setSearch} />
+
+      <SearchBar value={search} onChange={setSearch} onSubmit={triggerSearch} />
+
       <div className="container mx-auto py-10">
         <div className="flex gap-6 mt-6 max-w-7xl mx-auto">
           <Sidebar />
+
           <div className="flex-1">
-            {recipes.length === 0 ? (
+            {loading && <div className="text-center text-gray-500 text-lg py-10">Loading…</div>}
+            {error && <div className="text-center text-red-500 text-lg py-10">{error}</div>}
+
+            {!loading && !error && recipes.length === 0 && (
               <div className="text-center text-gray-500 text-lg py-10">No recipes found.</div>
-            ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                {recipes.map((r) => (
-                  <RecipeCard key={r.id} {...r} />
-                ))}
-              </div>
             )}
-            {totalPages > 1 && (
-              <Pagination
-                currentPage={currentPage}
-                totalPages={totalPages}
-                onPageChange={setCurrentPage}
-              />
+
+            {!loading && !error && recipes.length > 0 && (
+              <>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {recipes.map((r) => (
+                    <Link key={r.id} href={`/recipes/${r.id}`} className="block">
+                      <div className="relative bg-white shadow-lg rounded-lg overflow-hidden hover:bg-gray-100 cursor-pointer w-[300px] h-[300px]">
+                        <div className="relative w-full h-40">
+                          <Image
+                            src={r.imageUrl ?? "/images/placeholder.jpg"}
+                            alt={r.title}
+                            fill
+                            className="object-cover"
+                            priority
+                          />
+                        </div>
+
+                        <LikeButton recipeId={r.id} className="absolute top-2 right-2" />
+
+                        <div className="p-4">
+                          <h3 className="text-lg font-semibold text-gray-800">{r.title}</h3>
+                          <p className="text-gray-600">by {r.author?.name ?? "Anonyme"}</p>
+                        </div>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+
+                <Pagination page={page} pageCount={pageCount} onChange={setPage} />
+              </>
             )}
           </div>
         </div>
       </div>
+
       <VideoSection />
+      <NewsletterCTA />
     </div>
   );
-};
-
-export default Page;
+}

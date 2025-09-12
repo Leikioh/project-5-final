@@ -37,11 +37,13 @@ async function readRecipe(id: number) {
 
 export async function GET(
   _req: Request,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  { params }: any
+  { params }: { params: Promise<{ id: string }> }
 ) {
-  const id = Number(params?.id);
-  if (!id) return NextResponse.json({ error: "ID invalide" }, { status: 400 });
+  const { id: idParam } = await params;
+  const id = Number(idParam);
+  if (!Number.isFinite(id)) {
+    return NextResponse.json({ error: "ID invalide" }, { status: 400 });
+  }
 
   const recipe = await readRecipe(id);
   if (!recipe) return NextResponse.json({ error: "Introuvable" }, { status: 404 });
@@ -50,14 +52,16 @@ export async function GET(
 
 export async function PUT(
   req: Request,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  { params }: any
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const userId = await getUserId();
   if (!userId) return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
 
-  const id = Number(params?.id);
-  if (!id) return NextResponse.json({ error: "ID invalide" }, { status: 400 });
+  const { id: idParam } = await params;
+  const id = Number(idParam);
+  if (!Number.isFinite(id)) {
+    return NextResponse.json({ error: "ID invalide" }, { status: 400 });
+  }
 
   const recipe = await prisma.recipe.findUnique({ where: { id } });
   if (!recipe) return NextResponse.json({ error: "Introuvable" }, { status: 404 });
@@ -106,24 +110,30 @@ export async function PUT(
 
 export async function DELETE(
   _req: Request,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  { params }: any
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const userId = await getUserId();
   if (!userId) return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
 
-  const id = Number(params?.id);
-  if (!id) return NextResponse.json({ error: "ID invalide" }, { status: 400 });
+  const { id: idParam } = await params;
+  const id = Number(idParam);
+  if (!Number.isFinite(id)) {
+    return NextResponse.json({ error: "ID invalide" }, { status: 400 });
+  }
 
   const recipe = await prisma.recipe.findUnique({ where: { id } });
   if (!recipe) return NextResponse.json({ error: "Introuvable" }, { status: 404 });
   if (recipe.authorId !== userId) return NextResponse.json({ error: "Interdit" }, { status: 403 });
 
   await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
-    const commentIds = (await tx.comment.findMany({ where: { recipeId: id }, select: { id: true } })).map((c) => c.id);
+    const commentIds = (
+      await tx.comment.findMany({ where: { recipeId: id }, select: { id: true } })
+    ).map((c) => c.id);
+
     if (commentIds.length) {
       await tx.commentLike.deleteMany({ where: { commentId: { in: commentIds } } });
     }
+
     await tx.comment.deleteMany({ where: { recipeId: id } });
     await tx.favorite.deleteMany({ where: { recipeId: id } });
     await tx.step.deleteMany({ where: { recipeId: id } });
