@@ -1,12 +1,9 @@
+// app/api/auth/register/route.ts
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { hash } from "bcryptjs";
 
 export const runtime = "nodejs";
-
-export async function GET() {
-  return NextResponse.json({ error: "Use POST" }, { status: 405 });
-}
 
 type RegisterBody = { email?: string; password?: string; name?: string | null };
 
@@ -27,12 +24,15 @@ export async function POST(req: Request) {
   }
 
   const exists = await prisma.user.findUnique({ where: { email } });
-  if (exists) return NextResponse.json({ error: "Cet email est déjà utilisé" }, { status: 409 });
+  if (exists) {
+    return NextResponse.json({ error: "Email déjà utilisé" }, { status: 409 });
+  }
 
   const passwordHash = await hash(password, 10);
+
   const user = await prisma.user.create({
     data: { email, name, passwordHash },
-    select: { id: true, email: true, name: true },
+    select: { id: true, name: true, email: true },
   });
 
   return NextResponse.json(user, { status: 201 });

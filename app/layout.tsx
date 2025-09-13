@@ -1,19 +1,19 @@
 // app/layout.tsx
-import Providers from "@/components/Providers";
-import Navbar from "@/components/Navbar";
-import Footer from "@/components/Footer";
 import "./globals.css";
+import Navbar from "@/components/Navbar";
+import { Providers } from "./providers";
+import { AuthProvider } from "@/app/context/AuthContext";
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="fr">
-      <body className="min-h-screen flex flex-col">
+      <body>
+        <AuthProvider>
         <Providers>
           <Navbar />
-          {/* Contenu de page : on laisse de la place sous la navbar fixe */}
-          <main className="flex-1 pt-20">{children}</main>
-          <Footer />
+          <main className="pt-16">{children}</main>
         </Providers>
+        </AuthProvider>
       </body>
     </html>
   );

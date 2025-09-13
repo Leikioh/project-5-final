@@ -1,82 +1,88 @@
+// components/CommentForm.tsx
 "use client";
 
-import React, { useState } from "react";
-import { useRouter } from "next/navigation";
+import React from "react";
 import { useAuth } from "@/app/context/AuthContext";
-import { apiPath } from "@/lib/api";
 
-type Props = {
+type CommentFormProps = {
   recipeId: number;
-  onPosted?: (c: PostedComment) => void;
+  onPosted?: () => void;
 };
 
-type PostedComment = {
-  id: number;
-  content: string;
-  createdAt: string;
-  author: { id?: number; name: string | null; email?: string };
-};
+type ErrorJSON = { error?: unknown };
+type PostSuccessJSON = { ok?: boolean; id?: number };
 
-export default function CommentForm({ recipeId, onPosted }: Props) {
-  const [content, setContent] = useState("");
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+function isErrorJSON(v: unknown): v is ErrorJSON {
+  return typeof v === "object" && v !== null && "error" in v;
+}
 
-  // ✅ plus de token ici : on utilise seulement l’état d’auth
-  const { isAuthenticated } = useAuth();
-  const router = useRouter();
+export default function CommentForm({ recipeId, onPosted }: CommentFormProps) {
+  const { me, loading } = useAuth();
+  const [content, setContent] = React.useState<string>("");
+  const [submitting, setSubmitting] = React.useState<boolean>(false);
+  const [error, setError] = React.useState<string | null>(null);
 
-  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+  if (loading) {
+    return <p className="text-gray-500">Checking session…</p>;
+  }
+  if (!me) {
+    return <p className="text-gray-700">Connecte-toi pour écrire un commentaire.</p>;
+  }
+
+  async function submit(e: React.FormEvent<HTMLFormElement>): Promise<void> {
     e.preventDefault();
+    setError(null);
     const text = content.trim();
     if (!text) return;
 
-    if (!isAuthenticated) {
-      router.push("/auth/sign-in");
-      return;
-    }
-
     setSubmitting(true);
-    setError(null);
     try {
-      const res = await fetch(apiPath("/api/comments"), {
+      const res = await fetch("/api/comments", {
         method: "POST",
+        credentials: "include", // ⚠️ important pour envoyer le cookie
         headers: { "Content-Type": "application/json" },
-        credentials: "include", // cookies
         body: JSON.stringify({ recipeId, content: text }),
       });
 
       if (!res.ok) {
-        const msg = await res.text().catch(() => "");
-        throw new Error(msg || `HTTP ${res.status}`);
+        const data: unknown = await res.json().catch(() => null);
+        let message = "Impossible d'envoyer le commentaire";
+        if (isErrorJSON(data)) {
+          message = typeof data.error === "string" ? data.error : message;
+        }
+        throw new Error(message);
       }
 
-      const created = (await res.json()) as PostedComment;
-      onPosted?.(created);
+      const okJson: PostSuccessJSON = await res.json().catch(() => ({}));
+      if (!okJson.ok) {
+        // si ton API ne renvoie pas { ok: true }, on considère que c’est bon quand même
+      }
+
       setContent("");
+      if (onPosted) onPosted();
     } catch (err) {
-      console.error("CommentForm POST error:", err);
-      setError("Impossible d'envoyer le commentaire.");
+      setError(err instanceof Error ? err.message : "Erreur");
     } finally {
       setSubmitting(false);
     }
   }
 
   return (
-    <form onSubmit={handleSubmit} className="mt-6 space-y-3">
+    <form onSubmit={submit} className="space-y-2">
       <textarea
         value={content}
         onChange={(e) => setContent(e.target.value)}
-        placeholder="Write a comment…"
-        className="w-full border rounded p-2 text-gray-800"
+        className="w-full border rounded p-2 text-black"
+        placeholder={`Écrire un commentaire en tant que ${me.name ?? me.email}…`}
+        rows={3}
       />
-      {error && <p className="text-sm text-red-500">{error}</p>}
+      {error && <p className="text-sm text-red-600">{error}</p>}
       <button
         type="submit"
-        disabled={submitting || !content.trim()}
-        className="bg-orange-500 text-white px-4 py-2 rounded hover:bg-orange-600 disabled:opacity-50"
+        disabled={submitting || content.trim().length === 0}
+        className="bg-orange-500 text-white px-4 py-2 rounded disabled:opacity-50"
       >
-        {submitting ? "Sending…" : "Post Comment"}
+        {submitting ? "Envoi…" : "Publier"}
       </button>
     </form>
   );

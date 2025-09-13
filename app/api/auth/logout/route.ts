@@ -5,6 +5,12 @@ export const runtime = "nodejs";
 
 export async function POST() {
   const c = await cookies();
-  c.set("userId", "", { path: "/", maxAge: 0 });
+  c.set("userId", "", {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    path: "/",
+    maxAge: 0, // supprime
+  });
   return NextResponse.json({ ok: true });
 }

@@ -5,7 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { FaSearch, FaPlay, FaTimes } from "react-icons/fa";
 import { motion, AnimatePresence } from "framer-motion";
-import Navbar from "@/components/Navbar";
+import  Footer  from "@/components/Footer";
 import LikeButton from "@/components/LikeButton";
 import { apiPath } from "@/lib/api";
 
@@ -31,37 +31,34 @@ type RecipesResponse =
 
 const Banner = () => (
   <div className="relative mx-5 mt-20 rounded-xl overflow-hidden">
-    {/* hauteur réduite et responsive */}
-    <div className="relative h-[240px] md:h-[280px] lg:h-[420px]">
-      {/* image plein cadre */}
+    {/* hauteur responsive : min 220px, max 360px, ~42vw pour conserver 21:9 */}
+    <div className="relative w-full h-[clamp(220px,42vw,360px)]">
       <Image
-        src="/images/banner_full_2560x1080.jpg"
-        alt="Cooking in a cozy modern kitchen"
+        src="/images/banner_full_2560x1080.png"
+        alt="Cooking banner"
         fill
         priority
+        // Comme le conteneur suit le ratio 21:9, cover n'entraîne pas de recadrage.
         className="object-cover"
         sizes="100vw"
       />
+      <div className="absolute inset-0 bg-black/35" />
 
-      {/* overlay pour lisibilité du texte */}
-      <div className="absolute inset-0 bg-gradient-to-r from-black/60 via-black/30 to-transparent" />
-
-      {/* contenu */}
-      <div className="absolute inset-y-0 left-0 flex items-center">
-        <div className="px-5 md:px-10 max-w-xl text-white">
-          <h1 className="text-4xl md:text-5xl font-bold leading-tight">
+      <div className="absolute inset-y-0 left-6 md:left-10 flex items-center">
+        <div className="max-w-xl text-white">
+          <h1 className="text-3xl md:text-5xl font-bold leading-tight">
             Choose from thousands of recipes
           </h1>
-          <p className="mt-4 text-base md:text-lg">
+          <p className="mt-3 md:mt-4 text-base md:text-lg">
             Appropriately integrate technically sound value with scalable
             infomediaries negotiate sustainable strategic theme areas
           </p>
-          <Link
+          <a
             href="/auth/sign-in"
-            className="inline-block bg-orange-500 hover:bg-orange-600 px-6 py-3 rounded-lg mt-4 font-semibold"
+            className="inline-block bg-orange-500 px-5 md:px-6 py-2.5 md:py-3 rounded-lg mt-4 font-semibold text-white"
           >
             Sign up today →
-          </Link>
+          </a>
         </div>
       </div>
     </div>
@@ -71,7 +68,7 @@ const Banner = () => (
 const Sidebar = () => {
   const [isOpen, setIsOpen] = React.useState(false);
   return (
-    <aside className="bg-white p-6 rounded-lg w-64 flex-row">
+    <aside className="bg-white p-6 rounded-lg w-full lg:w-64">
       <h2 className="text-3xl font-bold mb-6 text-gray-950">Recipes</h2>
       <button
         className="w-full text-left font-bold text-gray-800 flex justify-between items-center"
@@ -324,57 +321,54 @@ export default function Page() {
   const [search, setSearch] = React.useState("");
   const lastSearchRef = React.useRef("");
 
-  const load = React.useCallback(
-    async (p: number, q: string) => {
-      setLoading(true);
-      setError(null);
+  const load = React.useCallback(async (p: number, q: string) => {
+    setLoading(true);
+    setError(null);
 
-      const url = new URL(apiPath("/api/recipes"), window.location.origin);
-      url.searchParams.set("page", String(p));
-      url.searchParams.set("take", String(TAKE));
-      if (q.trim()) url.searchParams.set("q", q.trim());
+    const url = new URL(apiPath("/api/recipes"), window.location.origin);
+    url.searchParams.set("page", String(p));
+    url.searchParams.set("take", String(TAKE));
+    if (q.trim()) url.searchParams.set("q", q.trim());
 
-      try {
-        const res = await fetch(url.toString(), { cache: "no-store", credentials: "include" });
-        if (!res.ok) {
-          const res2 = await fetch(apiPath("/api/recipes"), { cache: "no-store" });
-          const data2: RecipesResponse = await res2.json();
-          if (Array.isArray(data2)) {
-            const total = data2.length;
-            const pc = Math.max(1, Math.ceil(total / TAKE));
-            setPageCount(pc);
-            const start = (p - 1) * TAKE;
-            const items = data2.slice(start, start + TAKE);
-            setRecipes(items);
-          } else {
-            setRecipes(data2.items);
-            setPageCount(data2.pageCount);
-          }
-          return;
-        }
-
-        const data: RecipesResponse = await res.json();
-
-        if (Array.isArray(data)) {
-          const total = data.length;
+    try {
+      const res = await fetch(url.toString(), { cache: "no-store", credentials: "include" });
+      if (!res.ok) {
+        const res2 = await fetch(apiPath("/api/recipes"), { cache: "no-store" });
+        const data2: RecipesResponse = await res2.json();
+        if (Array.isArray(data2)) {
+          const total = data2.length;
           const pc = Math.max(1, Math.ceil(total / TAKE));
           setPageCount(pc);
           const start = (p - 1) * TAKE;
-          const items = data.slice(start, start + TAKE);
+          const items = data2.slice(start, start + TAKE);
           setRecipes(items);
         } else {
-          setRecipes(data.items);
-          setPageCount(Math.max(1, data.pageCount));
+          setRecipes(data2.items);
+          setPageCount(data2.pageCount);
         }
-      } catch {
-        setError("Erreur de chargement des recettes.");
-        setRecipes([]);
-      } finally {
-        setLoading(false);
+        return;
       }
-    },
-    [TAKE]
-  );
+
+      const data: RecipesResponse = await res.json();
+
+      if (Array.isArray(data)) {
+        const total = data.length;
+        const pc = Math.max(1, Math.ceil(total / TAKE));
+        setPageCount(pc);
+        const start = (p - 1) * TAKE;
+        const items = data.slice(start, start + TAKE);
+        setRecipes(items);
+      } else {
+        setRecipes(data.items);
+        setPageCount(Math.max(1, data.pageCount));
+      }
+    } catch {
+      setError("Erreur de chargement des recettes.");
+      setRecipes([]);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   React.useEffect(() => {
     void load(page, lastSearchRef.current);
@@ -388,13 +382,13 @@ export default function Page() {
 
   return (
     <div>
-      <Navbar />
+      
       <Banner />
 
       <SearchBar value={search} onChange={setSearch} onSubmit={triggerSearch} />
 
       <div className="container mx-auto py-10">
-        <div className="flex gap-6 mt-6 max-w-7xl mx-auto">
+        <div className="flex flex-col lg:flex-row gap-6 mt-6 max-w-7xl mx-auto">
           <Sidebar />
 
           <div className="flex-1">
@@ -407,27 +401,31 @@ export default function Page() {
 
             {!loading && !error && recipes.length > 0 && (
               <>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {recipes.map((r) => (
-                    <Link key={r.id} href={`/recipes/${r.id}`} className="block">
-                      <div className="relative bg-white shadow-lg rounded-lg overflow-hidden hover:bg-gray-100 cursor-pointer w-[300px] h-[300px]">
-                        <div className="relative w-full h-40">
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4 lg:gap-6">
+                  {recipes.map((recipe: Recipe) => (
+                    <Link key={recipe.id} href={`/recipes/${recipe.id}`} className="block">
+                      <article className="relative bg-white shadow rounded-lg overflow-hidden hover:bg-gray-50">
+                        <div className="relative aspect-[4/3]">
                           <Image
-                            src={r.imageUrl ?? "/images/placeholder.jpg"}
-                            alt={r.title}
+                            src={recipe.imageUrl ?? "/images/placeholder.jpg"}
+                            alt={recipe.title}
                             fill
                             className="object-cover"
+                            sizes="(max-width: 768px) 50vw, (max-width: 1024px) 33vw, 300px"
                             priority
                           />
+                          <LikeButton recipeId={recipe.id} className="absolute top-2 right-2" />
                         </div>
 
-                        <LikeButton recipeId={r.id} className="absolute top-2 right-2" />
-
-                        <div className="p-4">
-                          <h3 className="text-lg font-semibold text-gray-800">{r.title}</h3>
-                          <p className="text-gray-600">by {r.author?.name ?? "Anonyme"}</p>
+                        <div className="p-3">
+                          <h3 className="text-sm sm:text-base font-semibold text-gray-800 line-clamp-2">
+                            {recipe.title}
+                          </h3>
+                          <p className="text-xs sm:text-sm text-gray-600">
+                            by {recipe.author?.name ?? "Anonyme"}
+                          </p>
                         </div>
-                      </div>
+                      </article>
                     </Link>
                   ))}
                 </div>
@@ -441,6 +439,8 @@ export default function Page() {
 
       <VideoSection />
       <NewsletterCTA />
+      <Footer />
     </div>
   );
 }
+

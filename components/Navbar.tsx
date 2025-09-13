@@ -1,109 +1,134 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { useState, useEffect, useRef } from "react";
-import { motion } from "framer-motion";
+import { useEffect, useState } from "react";
+import { usePathname, useRouter } from "next/navigation";
+import { FaBars, FaTimes } from "react-icons/fa";
 import { useAuth } from "@/app/context/AuthContext";
 
-const navItems = [
-  { name: "Home", href: "/" },
-  { name: "Recipes", href: "/recipes" },
-  { name: "Search", href: "/search" },
-  { name: "Contact", href: "/contact" },
-];
-
 export default function Navbar() {
+  const [open, setOpen] = useState(false);
   const pathname = usePathname();
-  const { user, logout, isAuthenticated } = useAuth();
+  const router = useRouter();
+  const { me, loading, logout } = useAuth();
 
-  // refs pour chaque item
-  const itemRefs = useRef<(HTMLLIElement | null)[]>([]);
-  const containerRef = useRef<HTMLUListElement | null>(null);
-
-  // position et largeur de l’underline
-  const [underline, setUnderline] = useState({ x: 0, w: 0 });
-
-  // calcule l’index actif en fonction du pathname
-  const activeIndex = (() => {
-    if (pathname === "/") return 0;
-    const i = navItems.findIndex((n) => n.href !== "/" && pathname.startsWith(n.href));
-    return i === -1 ? 0 : i;
-  })();
-
-  // met à jour la position/largeur de l’underline quand la route ou la taille change
   useEffect(() => {
-    const update = () => {
-      const li = itemRefs.current[activeIndex];
-      const ul = containerRef.current;
-      if (!li || !ul) return;
+    setOpen(false);
+  }, [pathname]);
 
-      const liRect = li.getBoundingClientRect();
-      const ulRect = ul.getBoundingClientRect();
-      setUnderline({ x: liRect.left - ulRect.left, w: liRect.width });
-    };
-
-    update();
-    window.addEventListener("resize", update);
-    return () => window.removeEventListener("resize", update);
-  }, [activeIndex, pathname]);
+  const displayName =
+    me?.name && me.name.trim().length > 0
+      ? me.name
+      : me?.email
+      ? me.email.split("@")[0]
+      : "";
 
   return (
-    <header className="bg-white fixed top-0 w-full z-50 shadow-sm">
-      <div className="container mx-auto px-6 py-4 flex justify-between items-center">
-        <nav className="relative">
-          <ul
-            ref={containerRef}
-            className="flex items-center gap-8 relative"
-          >
-            {/* Underline unique, positionnée globalement */}
-            <motion.div
-              className="absolute bottom-0 h-1 bg-orange-500 rounded-full"
-              animate={{ x: underline.x, width: underline.w }}
-              transition={{ type: "spring", stiffness: 300, damping: 30 }}
-            />
-            {navItems.map((item, idx) => {
-              const isActive = idx === activeIndex;
-              return (
-                <li
-                  key={item.href}
-                  ref={(el) => {itemRefs.current[idx] = el;}}
-                  className={`relative px-1 py-2 ${
-                    isActive ? "text-orange-500 font-bold" : "text-gray-700 hover:text-orange-500"
-                  }`}
-                >
-                  <Link href={item.href}>{item.name}</Link>
-                </li>
-              );
-            })}
-          </ul>
-        </nav>
+    <header className="sticky top-0 z-40 w-full bg-white/90 backdrop-blur border-b border-gray-100">
+      <nav className="mx-auto max-w-7xl px-4 sm:px-6 h-16 flex items-center justify-between">
+        
 
-        <div className="hidden md:flex gap-4 items-center">
-          {!isAuthenticated ? (
+        {/* Menu desktop */}
+        <div className="hidden lg:flex items-center gap-6">
+          <Link href="/" className="text-black hover:text-orange-500">Home</Link>
+          <Link href="/recipes" className="text-black hover:text-orange-500">Recipes</Link>
+          <Link href="/search" className="text-black hover:text-orange-500">Search</Link>
+          <Link href="/contact" className="text-black hover:text-orange-500">Contact</Link>
+        </div>
+
+        {/* Actions desktop */}
+        <div className="hidden lg:flex items-center gap-3">
+          {loading ? (
+            <span className="text-gray-500 text-sm">…</span>
+          ) : me ? (
             <>
-              <Link href="/auth/sign-in" className="text-gray-500 px-4 py-2 rounded-lg hover:text-orange-500">
-                Sign In
-              </Link>
-              <Link href="/auth/register" className="bg-orange-500 px-4 py-2 rounded-lg text-white hover:shadow-lg">
-                Sign Up
-              </Link>
-            </>
-          ) : (
-            <>
-              <span className="text-gray-800 font-semibold">
-                Hello, {user?.name ?? user?.email}
+              <span className="text-sm text-gray-700">
+                Hello, <span className="font-semibold">{displayName}</span>
               </span>
               <button
-                onClick={logout}
-                className="text-gray-500 px-4 py-2 rounded-lg hover:text-orange-500"
+                onClick={async () => {
+                  await logout();
+                  router.refresh();
+                }}
+                className="px-3 py-2 rounded-md text-white bg-orange-500 hover:bg-orange-600"
               >
                 Sign Out
               </button>
             </>
+          ) : (
+            <>
+              <Link
+                href="/auth/sign-in"
+                className="px-4 py-2 rounded-md text-gray-800 hover:bg-gray-100"
+              >
+                Sign In
+              </Link>
+              <Link
+                href="/auth/register"
+                className="px-4 py-2 rounded-md bg-orange-500 text-white hover:bg-orange-600"
+              >
+                Sign Up
+              </Link>
+            </>
           )}
         </div>
-      </div>
+
+        {/* Bouton mobile */}
+        <button
+          onClick={() => setOpen((v) => !v)}
+          className="lg:hidden inline-flex items-center justify-center rounded-md p-2 text-gray-700 hover:bg-gray-100"
+          aria-label="Open menu"
+          aria-expanded={open}
+        >
+          {open ? <FaTimes /> : <FaBars />}
+        </button>
+      </nav>
+
+      {/* Menu mobile */}
+      {open && (
+        <div className="lg:hidden border-t border-gray-100 bg-white">
+          <div className="mx-auto max-w-7xl px-4 sm:px-6 py-3 grid gap-1">
+            <Link href="/" className="px-2 py-2 rounded text-black hover:bg-gray-100">Home</Link>
+            <Link href="/recipes" className="px-2 py-2 rounded text-black hover:bg-gray-100">Recipes</Link>
+            <Link href="/search" className="px-2 py-2 rounded text-black hover:bg-gray-100">Search</Link>
+            <Link href="/contact" className="px-2 py-2 rounded text-black hover:bg-gray-100">Contact</Link>
+
+            <div className="h-px bg-gray-100 my-1" />
+
+            {loading ? (
+              <span className="px-2 py-2 text-gray-500">…</span>
+            ) : me ? (
+              <>
+                <span className="px-2 py-2 text-sm text-gray-700">
+                  Hello, <span className="font-semibold">{displayName}</span>
+                </span>
+                <button
+                  onClick={async () => {
+                    await logout();
+                    setOpen(false);
+                    router.refresh();
+                  }}
+                  className="px-2 py-2 rounded text-left text-white hover:bg-gray-100"
+                >
+                  Sign Out
+                </button>
+              </>
+            ) : (
+              <>
+                <Link href="/auth/sign-in" className="px-2 py-2 rounded text-black hover:bg-gray-100">
+                  Sign In
+                </Link>
+                <Link
+                  href="/auth/register"
+                  className="px-2 py-2 rounded text-center bg-orange-500 text-white hover:bg-orange-600"
+                >
+                  Sign Up
+                </Link>
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </header>
   );
 }

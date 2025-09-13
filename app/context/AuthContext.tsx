@@ -1,69 +1,53 @@
 "use client";
 
-import React, { createContext, JSX, useCallback, useContext, useEffect, useState } from "react";
-import { apiPath } from "@/lib/api";
+import React, { createContext, useContext, useEffect, useState, useCallback } from "react";
 
-type AuthUser = { id: number; email: string; name: string | null };
-type AuthState = { user: AuthUser | null; isAuthenticated: boolean };
+export type AuthUser = { id: number; email: string; name: string | null };
 
-type AuthContextType = {
-  user: AuthUser | null;
-  isAuthenticated: boolean;
-  refresh: () => Promise<void>;
-  login: () => Promise<void>;
-  logout: () => Promise<void>;
+export type AuthContextType = {
+  me: AuthUser | null;
+  loading: boolean;
+  login: () => Promise<void>;   // recharge /me après un login réussi
+  logout: () => Promise<void>;  // appelle /api/auth/logout puis remet me=null
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export function AuthProvider({ children }: { children: React.ReactNode }): JSX.Element {
-  const [state, setState] = useState<AuthState>({ user: null, isAuthenticated: false });
+export function AuthProvider({ children }: { children: React.ReactNode }) {
+  const [me, setMe] = useState<AuthUser | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  const refresh = useCallback(async (): Promise<void> => {
+  const loadMe = useCallback(async () => {
+    setLoading(true);
     try {
-      const res = await fetch(apiPath("/api/auth/me"), { credentials: "include" });
-      if (!res.ok) {
-        setState({ user: null, isAuthenticated: false });
-        return;
-      }
-      const data: { authenticated: boolean; user: AuthUser } = await res.json();
-      if (data.authenticated) {
-        setState({ user: data.user, isAuthenticated: true });
-      } else {
-        setState({ user: null, isAuthenticated: false });
-      }
+      const res = await fetch("/api/auth/me", { credentials: "include", cache: "no-store" });
+      const data = (await res.json()) as { user: AuthUser | null };
+      setMe(data.user ?? null);
     } catch {
-      setState({ user: null, isAuthenticated: false });
-    }
-  }, []);
-
-  const login = useCallback(async (): Promise<void> => {
-    await refresh();
-  }, [refresh]);
-
-  const logout = useCallback(async (): Promise<void> => {
-    try {
-      await fetch(apiPath("/api/auth/logout"), {
-        method: "POST",
-        credentials: "include",
-      });
+      setMe(null);
     } finally {
-      setState({ user: null, isAuthenticated: false });
+      setLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    void refresh();
-  }, [refresh]);
+    void loadMe();
+  }, [loadMe]);
 
-  const value: AuthContextType = {
-    user: state.user,
-    isAuthenticated: state.isAuthenticated,
-    refresh,
-    login,
-    logout,
-  };
+  const login = useCallback(async () => {
+    // à appeler juste après un POST /api/auth/login OK
+    await loadMe();
+  }, [loadMe]);
 
+  const logout = useCallback(async () => {
+    try {
+      await fetch("/api/auth/logout", { method: "POST", credentials: "include" });
+    } finally {
+      setMe(null);
+    }
+  }, []);
+
+  const value: AuthContextType = { me, loading, login, logout };
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 

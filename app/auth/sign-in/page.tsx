@@ -38,7 +38,6 @@ const AuthPage: React.FC = () => {
         credentials: "include",
         body: JSON.stringify({ email: email.trim().toLowerCase(), password }),
       });
-
       if (!res.ok) {
         const payload: unknown = await res.json().catch(() => null);
         const message =
@@ -48,7 +47,7 @@ const AuthPage: React.FC = () => {
         throw new Error(message);
       }
 
-      await login();          // hydrate /me dans ton contexte
+      await login();
       resetForm();
       router.push("/recipes");
       router.refresh();
@@ -80,7 +79,6 @@ const AuthPage: React.FC = () => {
           name: name || null,
         }),
       });
-
       if (!res.ok) {
         const payload: unknown = await res.json().catch(() => null);
         const message =
@@ -90,14 +88,13 @@ const AuthPage: React.FC = () => {
         throw new Error(message);
       }
 
-      // connexion automatique (ou laisse ton flow tel quel si tu préfères)
+      // Connexion auto
       const resLogin = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
         body: JSON.stringify({ email: email.trim().toLowerCase(), password }),
       });
-
       if (!resLogin.ok) {
         const payload: unknown = await resLogin.json().catch(() => null);
         const message =
@@ -119,141 +116,166 @@ const AuthPage: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen flex bg-white">
-      {/* LEFT CARD */}
-      <div className="w-1/2 flex justify-center items-center p-8">
-        <div className="rounded-3xl p-10 w-full max-w-md shadow-lg">
-          <motion.div
-            key={isSignUp ? "signup" : "signin"}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            transition={{ duration: 0.3 }}
-          >
-            <h2 className="text-3xl font-bold mb-6 text-orange-500 text-center">
-              {isSignUp ? "Créer un compte" : "Connexion"}
-            </h2>
-
-            <form
-              onSubmit={isSignUp ? handleSignup : handleLogin}
-              className="flex flex-col gap-5"
-            >
-              {isSignUp && (
-                <input
-                  type="text"
-                  placeholder="Nom d'utilisateur"
-                  value={name}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setName(e.target.value)}
-                  className="px-4 py-3 rounded-lg border text-black border-gray-300 focus:outline-none focus:ring-2 focus:ring-orange-500"
-                  autoComplete="name"
-                />
-              )}
-
-              <input
-                type="email"
-                placeholder="Adresse email"
-                value={email}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEmail(e.target.value)}
-                className="px-4 py-3 rounded-lg border text-black border-gray-300 focus:outline-none focus:ring-2 focus:ring-orange-500"
-                autoComplete="email"
-                required
-              />
-
-              <input
-                type="password"
-                placeholder="Mot de passe"
-                value={password}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)}
-                className="px-4 py-3 rounded-lg border text-black border-gray-300 focus:outline-none focus:ring-2 focus:ring-orange-500"
-                autoComplete={isSignUp ? "new-password" : "current-password"}
-                required
-              />
-
-              {isSignUp && (
-                <input
-                  type="password"
-                  placeholder="Confirmer le mot de passe"
-                  value={confirm}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setConfirm(e.target.value)}
-                  className="px-4 py-3 rounded-lg border text-black border-gray-300 focus:outline-none focus:ring-2 focus:ring-orange-500"
-                  autoComplete="new-password"
-                  required
-                />
-              )}
-
-              {error && <p className="text-sm text-red-600 -mt-2">{error}</p>}
-
-              <button
-                type="submit"
-                disabled={loading}
-                className="bg-orange-500 hover:bg-orange-600 text-white font-semibold py-3 px-5 rounded-lg transition disabled:opacity-60 disabled:cursor-not-allowed"
+    <div className="min-h-screen bg-white">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 py-8 md:py-12">
+        {/* Responsive: 1 col (mobile) -> 2 cols (md+) */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-10 items-stretch">
+          {/* FORM CARD */}
+          <div className="w-full max-w-md md:max-w-lg mx-auto flex items-center">
+            <div className="w-full bg-white rounded-2xl shadow p-6 sm:p-8">
+              <motion.div
+                key={isSignUp ? "signup" : "signin"}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                transition={{ duration: 0.3 }}
               >
-                {loading
-                  ? isSignUp
-                    ? "Création du compte..."
-                    : "Connexion..."
-                  : isSignUp
-                    ? "S’inscrire"
-                    : "Se connecter"}
-              </button>
-            </form>
+                <h2 className="text-2xl sm:text-3xl font-bold mb-6 text-orange-500 text-center">
+                  {isSignUp ? "Créer un compte" : "Connexion"}
+                </h2>
 
-            <p className="mt-6 text-sm text-gray-600 text-center">
-              {isSignUp ? (
-                <>
-                  Vous avez déjà un compte ?{" "}
+                <form onSubmit={isSignUp ? handleSignup : handleLogin} className="flex flex-col gap-4">
+                  {isSignUp && (
+                    <div>
+                      <label htmlFor="username" className="sr-only">Nom d&apos;utilisateur</label>
+                      <input
+                        id="username"
+                        type="text"
+                        placeholder="Nom d'utilisateur"
+                        value={name}
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => setName(e.target.value)}
+                        className="w-full px-4 py-3 rounded-lg border text-black border-gray-300 focus:outline-none focus:ring-2 focus:ring-orange-500"
+                        autoComplete="username"
+                      />
+                    </div>
+                  )}
+
+                  <div>
+                    <label htmlFor="email" className="sr-only">Adresse email</label>
+                    <input
+                      id="email"
+                      type="email"
+                      placeholder="Adresse email"
+                      value={email}
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEmail(e.target.value)}
+                      className="w-full px-4 py-3 rounded-lg border text-black border-gray-300 focus:outline-none focus:ring-2 focus:ring-orange-500"
+                      autoComplete="email"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label htmlFor="password" className="sr-only">Mot de passe</label>
+                    <input
+                      id="password"
+                      type="password"
+                      placeholder="Mot de passe"
+                      value={password}
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)}
+                      className="w-full px-4 py-3 rounded-lg border text-black border-gray-300 focus:outline-none focus:ring-2 focus:ring-orange-500"
+                      autoComplete={isSignUp ? "new-password" : "current-password"}
+                      required
+                    />
+                  </div>
+
+                  {isSignUp && (
+                    <div>
+                      <label htmlFor="confirm" className="sr-only">Confirmer le mot de passe</label>
+                      <input
+                        id="confirm"
+                        type="password"
+                        placeholder="Confirmer le mot de passe"
+                        value={confirm}
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => setConfirm(e.target.value)}
+                        className="w-full px-4 py-3 rounded-lg border text-black border-gray-300 focus:outline-none focus:ring-2 focus:ring-orange-500"
+                        autoComplete="new-password"
+                        required
+                      />
+                    </div>
+                  )}
+
+                  {error && <p className="text-sm text-red-600 -mt-1">{error}</p>}
+
                   <button
-                    onClick={() => setIsSignUp(false)}
-                    className="text-orange-500 hover:underline"
+                    type="submit"
+                    disabled={loading}
+                    className="w-full bg-orange-500 hover:bg-orange-600 text-white font-semibold py-3 rounded-lg transition disabled:opacity-60 disabled:cursor-not-allowed"
                   >
-                    Connectez-vous
+                    {loading
+                      ? isSignUp
+                        ? "Création du compte..."
+                        : "Connexion..."
+                      : isSignUp
+                        ? "S’inscrire"
+                        : "Se connecter"}
                   </button>
-                </>
-              ) : (
-                <>
-                  Pas encore de compte ?{" "}
-                  <button
-                    onClick={() => setIsSignUp(true)}
-                    className="text-orange-500 hover:underline"
-                  >
-                    Inscrivez-vous
-                  </button>
-                </>
-              )}
-            </p>
-          </motion.div>
-        </div>
-      </div>
+                </form>
 
-      {/* RIGHT CARD */}
-      <div className="w-1/2 flex justify-center items-center p-8">
-        <div className="relative bg-gray-900 rounded-3xl shadow-xl w-full h-full flex justify-center items-center overflow-hidden">
-          <Image
-            src="/images/signOut.jpg"
-            alt="Cooking Illustration"
-            fill
-            className="object-cover rounded-3xl brightness-90"
-            priority
-          />
+                <p className="mt-6 text-sm text-gray-600 text-center">
+                  {isSignUp ? (
+                    <>
+                      Vous avez déjà un compte ?{" "}
+                      <button onClick={() => setIsSignUp(false)} className="text-orange-500 hover:underline">
+                        Connectez-vous
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      Pas encore de compte ?{" "}
+                      <button onClick={() => setIsSignUp(true)} className="text-orange-500 hover:underline">
+                        Inscrivez-vous
+                      </button>
+                    </>
+                  )}
+                </p>
+              </motion.div>
+            </div>
+          </div>
 
-          {!isSignUp && (
+          {/* IMAGE + OVERLAY CTA (le “Nouveau ? Créer un compte” est ICI dans la photo) */}
+          <div className="relative h-56 xs:h-64 sm:h-72 md:h-auto rounded-3xl overflow-hidden">
+            <Image
+              src="/images/signOut.jpg"
+              alt="Cooking Illustration"
+              fill
+              sizes="(max-width: 768px) 100vw, 50vw"
+              className="object-cover"
+              priority
+            />
+
             <motion.div
-              className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-t from-white/90 to-white/50 p-12 rounded-2xl"
+              className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-t from-white/90 to-white/50 p-6 sm:p-10"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ duration: 0.5 }}
             >
-              <p className="text-4xl font-semibold text-gray-600 mb-6 text-center">
-                Nouveau ? <br /> Rejoins-nous et partage tes recettes.
-              </p>
-              <button
-                onClick={() => setIsSignUp(true)}
-                className="bg-white text-black shadow-lg px-8 py-3 rounded-xl font-semibold hover:bg-orange-600 transition"
-              >
-                Créer un compte
-              </button>
+              {isSignUp ? (
+                <>
+                  <p className="text-2xl sm:text-3xl font-semibold text-gray-700 mb-4 sm:mb-6 text-center">
+                    Déjà inscrit ?
+                  </p>
+                  <button
+                    onClick={() => setIsSignUp(false)}
+                    className="bg-white text-black shadow px-6 py-2.5 sm:px-8 sm:py-3 rounded-xl font-semibold hover:bg-orange-600 hover:text-white transition"
+                  >
+                    Se connecter
+                  </button>
+                </>
+              ) : (
+                <>
+                  <p className="text-2xl sm:text-3xl font-semibold text-gray-700 mb-4 sm:mb-6 text-center">
+                    Nouveau ? <br className="hidden sm:block" /> Rejoins-nous et partage tes recettes.
+                  </p>
+                  <button
+                    onClick={() => setIsSignUp(true)}
+                    className="bg-white text-black shadow px-6 py-2.5 sm:px-8 sm:py-3 rounded-xl font-semibold hover:bg-orange-600 hover:text-white transition"
+                  >
+                    Créer un compte
+                  </button>
+                </>
+              )}
             </motion.div>
-          )}
+          </div>
         </div>
       </div>
     </div>

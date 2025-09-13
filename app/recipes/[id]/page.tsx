@@ -6,28 +6,15 @@ import { useParams } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { FaClock, FaUtensils } from "react-icons/fa";
-import { useCurrentUser } from "../../hooks/useCurrentUser";
+import Footer from "@/components/Footer";
 import { apiPath } from "@/lib/api";
+import CommentsPanel from "@/components/CommentsPanel";
 
 /* ── Types ─────────────────────────────────────────────────────────────────── */
 
 type Step = { id: number; text: string };
 type Ingredient = { id: number; name: string };
 type Author = { id: number; name: string | null };
-
-type CommentItem = {
-  id: number;
-  author: { id?: number; name: string | null; email?: string };
-  content: string;
-  createdAt: string;
-};
-
-type CommentPayload = {
-  id: number;
-  content: string;
-  createdAt: string;
-  author?: { id?: number; name: string | null; email?: string };
-};
 
 type RecipeAPI = {
   id: number;
@@ -43,19 +30,7 @@ type RecipeAPI = {
   _count?: { favorites: number; comments: number };
 };
 
-/* ── Helpers ───────────────────────────────────────────────────────────────── */
-
-function isCommentPayload(v: unknown): v is CommentPayload {
-  if (!v || typeof v !== "object") return false;
-  const o = v as Record<string, unknown>;
-  return (
-    typeof o.id === "number" &&
-    typeof o.content === "string" &&
-    typeof o.createdAt === "string"
-  );
-}
-
-/* ── Sous-composant: suggestions aléatoires ───────────────────────────────── */
+/* ── Sous-composant : suggestions aléatoires ──────────────────────────────── */
 
 function RandomRecipes({ currentId }: { currentId: number }): JSX.Element | null {
   type ListItem = {
@@ -74,37 +49,40 @@ function RandomRecipes({ currentId }: { currentId: number }): JSX.Element | null
     const load = async (): Promise<void> => {
       setLoading(true);
       try {
-        const res = await fetch(apiPath("/api/recipes"), { cache: "no-store", credentials: "include" });
+        const res = await fetch(apiPath("/api/recipes"), {
+          cache: "no-store",
+          credentials: "include",
+        });
         if (!res.ok) {
           if (mounted) setAll([]);
           return;
         }
-        const data: unknown = await res.json().catch(() => null);
+        const data = (await res.json()) as unknown;
+
         const list: ListItem[] = Array.isArray(data)
-          ? (data as Array<Record<string, unknown>>)
-              .map((r) => ({
-                id: typeof r.id === "number" ? r.id : NaN,
-                title: typeof r.title === "string" ? r.title : "",
-                imageUrl: typeof r.imageUrl === "string" ? r.imageUrl : null,
-                author:
-                  typeof r === "object" &&
-                  r !== null &&
-                  "author" in r &&
-                  typeof (r as { author: unknown }).author === "object" &&
-                  (r as { author: Record<string, unknown> }).author !== null
-                    ? {
-                        id:
-                          typeof (r as { author: Record<string, unknown> }).author.id === "number"
-                            ? ((r as { author: Record<string, unknown> }).author.id as number)
-                            : NaN,
-                        name:
-                          typeof (r as { author: Record<string, unknown> }).author.name === "string" ||
-                          (r as { author: Record<string, unknown> }).author.name === null
-                            ? ((r as { author: Record<string, unknown> }).author.name as string | null)
-                            : null,
-                      }
-                    : { id: NaN, name: null },
-              }))
+          ? data
+              .map((r) => {
+                const rec = r as Partial<ListItem>;
+                return {
+                  id: typeof rec.id === "number" ? rec.id : NaN,
+                  title: typeof rec.title === "string" ? rec.title : "",
+                  imageUrl: typeof rec.imageUrl === "string" ? rec.imageUrl : null,
+                  author:
+                    rec.author && typeof rec.author === "object"
+                      ? {
+                          id:
+                            typeof (rec.author as { id?: number }).id === "number"
+                              ? (rec.author as { id?: number }).id!
+                              : NaN,
+                          name:
+                            typeof (rec.author as { name?: string | null }).name === "string" ||
+                            (rec.author as { name?: string | null }).name === null
+                              ? ((rec.author as { name?: string | null }).name ?? null)
+                              : null,
+                        }
+                      : { id: NaN, name: null },
+                };
+              })
               .filter((x) => Number.isFinite(x.id) && x.title.length > 0)
           : [];
 
@@ -124,7 +102,6 @@ function RandomRecipes({ currentId }: { currentId: number }): JSX.Element | null
 
   const picks = useMemo(() => {
     const pool = all.filter((r) => r.id !== currentId).slice();
-    // shuffle
     for (let i = pool.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
       [pool[i], pool[j]] = [pool[j], pool[i]];
@@ -147,6 +124,7 @@ function RandomRecipes({ currentId }: { currentId: number }): JSX.Element | null
                   alt={r.title}
                   fill
                   className="object-cover group-hover:scale-[1.02] transition"
+                  sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
                 />
               </div>
               <div className="p-3">
@@ -168,13 +146,9 @@ export default function RecipeDetailPage(): JSX.Element {
   const recipeId = Number(id);
 
   const [recipe, setRecipe] = useState<RecipeAPI | null>(null);
-  const [comments, setComments] = useState<CommentItem[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
-  const [newComment, setNewComment] = useState<string>("");
 
-  const { user, loading: userLoading } = useCurrentUser();
-
-  // Charger recette + commentaires
+  // Charger uniquement la recette (les commentaires sont gérés par CommentsPanel)
   useEffect(() => {
     if (!Number.isFinite(recipeId)) return;
 
@@ -183,160 +157,54 @@ export default function RecipeDetailPage(): JSX.Element {
     const load = async (): Promise<void> => {
       setLoading(true);
       try {
-        // 1) Recette
         const res = await fetch(apiPath(`/api/recipes/${recipeId}`), {
           cache: "no-store",
           credentials: "include",
         });
-        if (res.ok) {
-          const data: unknown = await res.json().catch(() => null);
-          const r = data as Partial<RecipeAPI> | null;
-
-          if (
-            r &&
-            typeof r === "object" &&
-            typeof r.id === "number" &&
-            typeof r.title === "string"
-          ) {
-            if (mounted) {
-              setRecipe({
-                id: r.id,
-                title: r.title,
-                description: (r.description ?? null) as string | null,
-                imageUrl: (r.imageUrl ?? null) as string | null,
-                author: (r.author ?? { id: NaN, name: null }) as Author,
-                steps: Array.isArray(r.steps) ? (r.steps as Step[]) : [],
-                ingredients: Array.isArray(r.ingredients) ? (r.ingredients as Ingredient[]) : [],
-                activeTime: (r.activeTime ?? null) as string | null,
-                totalTime: (r.totalTime ?? null) as string | null,
-                yield: (r.yield ?? null) as string | null,
-                _count: (r._count ?? undefined) as RecipeAPI["_count"],
-              });
-            }
-          } else if (mounted) {
-            setRecipe(null);
+        if (!res.ok) {
+          if (mounted) setRecipe(null);
+          return;
+        }
+        const data = (await res.json()) as Partial<RecipeAPI>;
+        if (
+          data &&
+          typeof data.id === "number" &&
+          typeof data.title === "string"
+        ) {
+          if (mounted) {
+            setRecipe({
+              id: data.id,
+              title: data.title,
+              description: (data.description ?? null) as string | null,
+              imageUrl: (data.imageUrl ?? null) as string | null,
+              author: (data.author ?? { id: NaN, name: null }) as Author,
+              steps: Array.isArray(data.steps) ? (data.steps as Step[]) : [],
+              ingredients: Array.isArray(data.ingredients)
+                ? (data.ingredients as Ingredient[])
+                : [],
+              activeTime: (data.activeTime ?? null) as string | null,
+              totalTime: (data.totalTime ?? null) as string | null,
+              yield: (data.yield ?? null) as string | null,
+              _count: (data._count ?? undefined) as RecipeAPI["_count"],
+            });
           }
         } else if (mounted) {
           setRecipe(null);
         }
-
-        // 2) Commentaires
-        const resC = await fetch(apiPath(`/api/comments?recipeId=${recipeId}`), {
-          cache: "no-store",
-          credentials: "include",
-        });
-        if (resC.ok) {
-          const cc: unknown = await resC.json().catch(() => null);
-          const list: CommentItem[] = Array.isArray(cc)
-            ? (cc as Array<Record<string, unknown>>)
-                .map((c) => ({
-                  id: typeof c.id === "number" ? c.id : NaN,
-                  author:
-                    typeof c === "object" &&
-                    c !== null &&
-                    "author" in c &&
-                    typeof (c as { author: unknown }).author === "object" &&
-                    (c as { author: Record<string, unknown> }).author !== null
-                      ? {
-                          name:
-                            typeof (c as { author: Record<string, unknown> }).author.name === "string" ||
-                            (c as { author: Record<string, unknown> }).author.name === null
-                              ? ((c as { author: Record<string, unknown> }).author.name as string | null)
-                              : null,
-                          email:
-                            typeof (c as { author: Record<string, unknown> }).author.email === "string"
-                              ? ((c as { author: Record<string, unknown> }).author.email as string)
-                              : undefined,
-                          id:
-                            typeof (c as { author: Record<string, unknown> }).author.id === "number"
-                              ? ((c as { author: Record<string, unknown> }).author.id as number)
-                              : undefined,
-                        }
-                      : { name: null },
-                  content: typeof c.content === "string" ? (c.content as string) : "",
-                  createdAt: typeof c.createdAt === "string" ? (c.createdAt as string) : new Date().toISOString(),
-                }))
-                .filter((x) => Number.isFinite(x.id) && x.content.length > 0)
-            : [];
-          if (mounted) setComments(list);
-        } else if (mounted) {
-          setComments([]);
-        }
       } catch {
-        if (mounted) {
-          setRecipe(null);
-          setComments([]);
-        }
+        if (mounted) setRecipe(null);
       } finally {
         if (mounted) setLoading(false);
       }
     };
 
     void load();
-
     return () => {
       mounted = false;
     };
   }, [recipeId]);
 
-  const handleCommentSubmit = async (e: React.FormEvent<HTMLFormElement>): Promise<void> => {
-    e.preventDefault();
-    const content = newComment.trim();
-    if (!content || !Number.isFinite(recipeId)) return;
-
-    try {
-      // Notre API crée un commentaire via /api/comments (body: { recipeId, content })
-      const res = await fetch(apiPath("/api/comments"), {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ recipeId, content }),
-      });
-
-      if (!res.ok) {
-        const txt = await res.text().catch(() => "");
-        alert(`Erreur lors de l’envoi du commentaire. ${txt}`);
-        return;
-      }
-
-      // Réponse attendue: { id, content, createdAt, author? }
-      const createdUnknown: unknown = await res.json().catch(() => null);
-
-      if (isCommentPayload(createdUnknown)) {
-        const a = createdUnknown.author;
-        const author: CommentItem["author"] = {
-          id: typeof a?.id === "number" ? a.id : undefined,
-          name: (a?.name ?? null) as string | null,
-          email: typeof a?.email === "string" ? a.email : undefined,
-        };
-
-        const newC: CommentItem = {
-          id: createdUnknown.id,
-          content: createdUnknown.content,
-          createdAt: createdUnknown.createdAt,
-          author,
-        };
-
-        setComments((prev) => [newC, ...prev]);
-        setNewComment("");
-      } else {
-        // fallback : recharger la liste
-        const again = await fetch(apiPath(`/api/comments?recipeId=${recipeId}`), {
-          cache: "no-store",
-          credentials: "include",
-        });
-        if (again.ok) {
-          const list = (await again.json().catch(() => [])) as CommentItem[];
-          setComments(Array.isArray(list) ? list : []);
-          setNewComment("");
-        }
-      }
-    } catch {
-      alert("Erreur technique lors de l’envoi.");
-    }
-  };
-
-  if (loading || userLoading) return <p className="text-center py-10">Chargement...</p>;
+  if (loading) return <p className="text-center py-10">Chargement...</p>;
   if (!recipe) return <p className="text-center py-10 text-red-500">Recette introuvable.</p>;
 
   const favoritesCount = recipe._count?.favorites ?? 0;
@@ -350,6 +218,7 @@ export default function RecipeDetailPage(): JSX.Element {
           alt={recipe.title}
           fill
           className="object-cover"
+          sizes="(max-width: 768px) 100vw, (max-width: 1280px) 80vw, 960px"
         />
       </div>
 
@@ -419,49 +288,16 @@ export default function RecipeDetailPage(): JSX.Element {
         </aside>
       </div>
 
-      {/* Comments */}
-      <section className="mt-12">
-        <h2 className="text-2xl text-black font-bold mb-4">Comments</h2>
-
-        {comments.length === 0 ? (
-          <p className="text-gray-500">No comments yet.</p>
-        ) : (
-          <div className="space-y-4">
-            {comments.map((c) => (
-              <div key={c.id} className="border-b pb-2">
-                <p className="font-semibold text-orange-500">{c.author?.name ?? "Anonyme"}</p>
-                <p className="text-gray-700">{c.content}</p>
-                <p className="text-xs text-gray-400">
-                  {new Date(c.createdAt).toLocaleDateString()}
-                </p>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* New comment form */}
-        {user ? (
-          <form onSubmit={handleCommentSubmit} className="mt-6 space-y-4">
-            <textarea
-              placeholder="Write a comment..."
-              value={newComment}
-              onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setNewComment(e.target.value)}
-              className="border p-2 text-gray-700 rounded w-full"
-            />
-            <button
-              type="submit"
-              className="bg-orange-500 text-white px-4 py-2 rounded hover:bg-orange-600"
-            >
-              Post Comment
-            </button>
-          </form>
-        ) : (
-          <p className="text-sm text-gray-500 mt-4">🔐 Connecte-toi pour écrire un commentaire.</p>
-        )}
-      </section>
+      {/* Comments (entièrement géré par CommentsPanel) */}
+      {Number.isFinite(recipeId) && (
+        <section className="mt-12">
+          <CommentsPanel recipeId={recipeId} />
+        </section>
+      )}
 
       {/* 4 recettes aléatoires */}
       {Number.isFinite(recipeId) && <RandomRecipes currentId={recipeId} />}
+      <Footer />
     </main>
   );
 }

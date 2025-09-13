@@ -3,7 +3,7 @@
 import React from "react";
 import Image from "next/image";
 import Link from "next/link";
-import Navbar from "@/components/Navbar";
+
 import LikeButton from "@/components/LikeButton";
 import { apiPath } from "@/lib/api";
 
@@ -20,8 +20,6 @@ type PagedResponse = {
 type RecipesResponse = PagedResponse | Recipe[];
 
 /* Helpers */
-const isPaged = (v: unknown): v is PagedResponse =>
-  !!v && typeof v === "object" && "items" in (v as Record<string, unknown>);
 
 const pickRandom = (arr: Recipe[]): Recipe | null =>
   arr.length ? arr[Math.floor(Math.random() * arr.length)] : null;
@@ -71,7 +69,7 @@ export default function RecipesRandomizerPage(): React.JSX.Element {
 
   return (
     <div className="min-h-screen bg-orange-50">
-      <Navbar />
+      
       <main className="max-w-6xl mx-auto px-6 pt-24 pb-16">
 
         {error && <p className="text-red-500">{error}</p>}

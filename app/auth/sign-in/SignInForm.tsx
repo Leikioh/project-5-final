@@ -1,11 +1,21 @@
 "use client";
 
-import React, { JSX, useState } from "react";
+import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/app/context/AuthContext";
 
-export default function SignInForm(): JSX.Element {
-  const [name, setName] = useState<string>(""); // <-- nouveau (optionnel)
+type SignInFormProps = {
+  /** Chemin de redirection après connexion réussie */
+  onSuccessRedirect?: string;
+  /** Afficher ou non le champ "Nom d'utilisateur" */
+  showNameField?: boolean;
+};
+
+export default function SignInForm({
+  onSuccessRedirect = "/recipes",
+  showNameField = true,
+}: SignInFormProps) {
+  const [name, setName] = useState<string>("");
   const [email, setEmail] = useState<string>("");
   const [password, setPassword] = useState<string>("");
   const [error, setError] = useState<string | null>(null);
@@ -32,7 +42,7 @@ export default function SignInForm(): JSX.Element {
         credentials: "include",
         body: JSON.stringify({
           email: email.trim().toLowerCase(),
-          password, // le backend n'utilise pas `name` pour la connexion — c'est purement UI ici
+          password, // `name` est purement UI ici
         }),
       });
 
@@ -47,7 +57,7 @@ export default function SignInForm(): JSX.Element {
 
       await login();
       resetForm();
-      router.push("/recipes");
+      router.push(onSuccessRedirect);
       router.refresh();
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Erreur lors de la connexion.");
@@ -57,46 +67,78 @@ export default function SignInForm(): JSX.Element {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-      {/* Champ optionnel pour rester cohérent avec ta page sign-in */}
-      <input
-        type="text"
-        placeholder="Nom d'utilisateur (optionnel)"
-        value={name}
-        onChange={(e: React.ChangeEvent<HTMLInputElement>) => setName(e.target.value)}
-        className="px-4 py-2 border rounded text-black"
-        autoComplete="username"
-      />
-
-      <input
-        type="email"
-        placeholder="Email"
-        value={email}
-        onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEmail(e.target.value)}
-        className="px-4 py-2 border rounded text-black"
-        autoComplete="email"
-        required
-      />
-
-      <input
-        type="password"
-        placeholder="Mot de passe"
-        value={password}
-        onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)}
-        className="px-4 py-2 border rounded text-black"
-        autoComplete="current-password"
-        required
-      />
-
-      {error && <p className="text-sm text-red-600">{error}</p>}
-
-      <button
-        type="submit"
-        disabled={loading}
-        className="bg-orange-500 text-white py-2 rounded hover:bg-orange-600 disabled:opacity-60 disabled:cursor-not-allowed"
+    <div className="w-full max-w-sm sm:max-w-md mx-auto">
+      <form
+        onSubmit={handleSubmit}
+        className="bg-white rounded-2xl shadow p-4 sm:p-6 flex flex-col gap-4"
       >
-        {loading ? "Connexion..." : "Se connecter"}
-      </button>
-    </form>
+        <h2 className="text-xl sm:text-2xl font-bold text-gray-900 text-center">
+          Connexion
+        </h2>
+
+        {showNameField && (
+          <div>
+            <label htmlFor="username" className="sr-only">
+              Nom d&apos;utilisateur (optionnel)
+            </label>
+            <input
+              id="username"
+              type="text"
+              placeholder="Nom d'utilisateur (optionnel)"
+              value={name}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setName(e.target.value)}
+              className="w-full px-4 py-3 rounded-lg border text-black border-gray-300 focus:outline-none focus:ring-2 focus:ring-orange-500"
+              autoComplete="username"
+            />
+          </div>
+        )}
+
+        <div>
+          <label htmlFor="email" className="sr-only">
+            Adresse email
+          </label>
+          <input
+            id="email"
+            type="email"
+            placeholder="Adresse email"
+            value={email}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEmail(e.target.value)}
+            className="w-full px-4 py-3 rounded-lg border text-black border-gray-300 focus:outline-none focus:ring-2 focus:ring-orange-500"
+            autoComplete="email"
+            required
+          />
+        </div>
+
+        <div>
+          <label htmlFor="password" className="sr-only">
+            Mot de passe
+          </label>
+          <input
+            id="password"
+            type="password"
+            placeholder="Mot de passe"
+            value={password}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)}
+            className="w-full px-4 py-3 rounded-lg border text-black border-gray-300 focus:outline-none focus:ring-2 focus:ring-orange-500"
+            autoComplete="current-password"
+            required
+          />
+        </div>
+
+        {error && (
+          <p role="alert" className="text-sm text-red-600">
+            {error}
+          </p>
+        )}
+
+        <button
+          type="submit"
+          disabled={loading}
+          className="w-full bg-orange-500 hover:bg-orange-600 text-white font-semibold py-3 rounded-lg transition disabled:opacity-60 disabled:cursor-not-allowed"
+        >
+          {loading ? "Connexion..." : "Se connecter"}
+        </button>
+      </form>
+    </div>
   );
 }

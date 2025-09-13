@@ -5,16 +5,17 @@ import { cookies } from "next/headers";
 export const runtime = "nodejs";
 
 export async function GET() {
-  const c = await cookies();
-  const raw = c.get("userId")?.value;
-  const userId = raw ? Number(raw) : NaN;
-  if (!Number.isFinite(userId)) return NextResponse.json({ authenticated: false }, { status: 401 });
+  const store = await cookies();
+  const raw = store.get("userId")?.value;
+  const id = raw ? Number(raw) : NaN;
+  if (!Number.isFinite(id)) {
+    return NextResponse.json({ user: null }, { status: 200 });
+  }
 
   const user = await prisma.user.findUnique({
-    where: { id: userId },
-    select: { id: true, email: true, name: true }
+    where: { id },
+    select: { id: true, email: true, name: true },
   });
-  if (!user) return NextResponse.json({ authenticated: false }, { status: 401 });
 
-  return NextResponse.json({ authenticated: true, user });
+  return NextResponse.json({ user: user ?? null }, { status: 200 });
 }

@@ -6,6 +6,7 @@ import Link from "next/link";
 import { FaSearch } from "react-icons/fa";
 import LikeButton from "@/components/LikeButton";
 import { apiPath } from "@/lib/api";
+import Footer from "@/components/Footer";
 
 /* ── Types ─────────────────────────────────────────────────────────────── */
 
@@ -244,6 +245,7 @@ export default function SearchPage() {
           </div>
 
           <Pagination page={page} pageCount={pageCount} onChange={setPage} />
+          <Footer />
         </>
       )}
     </main>
