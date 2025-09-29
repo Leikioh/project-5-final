@@ -6,7 +6,7 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 
 const RegisterPage: React.FC = () => {
-  const [name, setName] = useState<string>(""); // optionnel
+  const [name, setName] = useState<string>("");
   const [email, setEmail] = useState<string>("");
   const [password, setPassword] = useState<string>("");
   const [confirmPassword, setConfirm] = useState<string>("");
@@ -25,7 +25,6 @@ const RegisterPage: React.FC = () => {
 
     setLoading(true);
     try {
-      // 1) Création du compte
       const res = await fetch("/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -45,8 +44,6 @@ const RegisterPage: React.FC = () => {
             : "Inscription impossible";
         throw new Error(message);
       }
-
-      // 2) Connexion automatique
       const resLogin = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -78,9 +75,7 @@ const RegisterPage: React.FC = () => {
   return (
     <div className="min-h-screen bg-white">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 py-8 md:py-12">
-        {/* Grid responsive : 1 colonne (mobile) -> 2 colonnes (desktop) */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-10 items-stretch">
-          {/* Colonne image / accroche (en haut sur mobile) */}
           <div className="relative h-56 xs:h-64 sm:h-72 md:h-auto rounded-3xl overflow-hidden order-1 md:order-none">
             <Image
               src="/images/signOut.jpg"
@@ -108,7 +103,6 @@ const RegisterPage: React.FC = () => {
             </motion.div>
           </div>
 
-          {/* Carte formulaire (centrée et fluide) */}
           <div className="w-full max-w-md md:max-w-lg mx-auto flex items-center">
             <div className="w-full bg-white rounded-2xl shadow p-5 sm:p-7">
               <motion.h2

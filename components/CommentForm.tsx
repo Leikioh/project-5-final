@@ -1,4 +1,3 @@
-// components/CommentForm.tsx
 "use client";
 
 import React from "react";
@@ -39,7 +38,7 @@ export default function CommentForm({ recipeId, onPosted }: CommentFormProps) {
     try {
       const res = await fetch("/api/comments", {
         method: "POST",
-        credentials: "include", // ⚠️ important pour envoyer le cookie
+        credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ recipeId, content: text }),
       });
@@ -55,7 +54,6 @@ export default function CommentForm({ recipeId, onPosted }: CommentFormProps) {
 
       const okJson: PostSuccessJSON = await res.json().catch(() => ({}));
       if (!okJson.ok) {
-        // si ton API ne renvoie pas { ok: true }, on considère que c’est bon quand même
       }
 
       setContent("");

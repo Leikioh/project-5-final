@@ -5,9 +5,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/app/context/AuthContext";
 
 type SignInFormProps = {
-  /** Chemin de redirection après connexion réussie */
   onSuccessRedirect?: string;
-  /** Afficher ou non le champ "Nom d'utilisateur" */
   showNameField?: boolean;
 };
 
@@ -42,7 +40,7 @@ export default function SignInForm({
         credentials: "include",
         body: JSON.stringify({
           email: email.trim().toLowerCase(),
-          password, // `name` est purement UI ici
+          password,
         }),
       });
 

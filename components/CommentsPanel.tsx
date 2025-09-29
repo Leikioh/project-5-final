@@ -1,4 +1,3 @@
-// components/CommentsPanel.tsx
 "use client";
 
 import React from "react";
@@ -32,7 +31,7 @@ export default function CommentsPanel({ recipeId }: { recipeId: number }) {
       const url = new URL("/api/comments", window.location.origin);
       url.searchParams.set("recipeId", String(recipeId));
       const res = await fetch(url.toString(), {
-        credentials: "include", // 🟧 important pour porter le cookie
+        credentials: "include",
         cache: "no-store",
       });
       if (!res.ok) throw new Error("Chargement des commentaires impossible");
@@ -70,8 +69,7 @@ export default function CommentsPanel({ recipeId }: { recipeId: number }) {
           ))}
         </ul>
       )}
-
-      {/* Zone d’édition gérée par le contexte d’auth */}
+      
       {loading ? (
         <p className="text-gray-500">Checking session…</p>
       ) : me ? (

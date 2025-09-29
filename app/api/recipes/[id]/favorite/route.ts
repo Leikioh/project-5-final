@@ -11,7 +11,6 @@ async function getUserId(): Promise<number | null> {
   return Number.isFinite(n) ? n : null;
 }
 
-// GET -> { liked, favoritesCount }
 export async function GET(
   _req: Request,
   context: { params: Promise<{ id: string }> }
@@ -33,7 +32,6 @@ export async function GET(
   return NextResponse.json({ liked, favoritesCount });
 }
 
-// POST -> like
 export async function POST(
   _req: Request,
   context: { params: Promise<{ id: string }> }
@@ -57,7 +55,6 @@ export async function POST(
   return NextResponse.json({ liked: true, favoritesCount }, { status: 201 });
 }
 
-// DELETE -> unlike
 export async function DELETE(
   _req: Request,
   context: { params: Promise<{ id: string }> }
@@ -73,7 +70,7 @@ export async function DELETE(
 
   await prisma.favorite.delete({
     where: { userId_recipeId: { userId, recipeId } },
-  }).catch(() => undefined); // ok si déjà supprimé
+  }).catch(() => undefined);
 
   const favoritesCount = await prisma.favorite.count({ where: { recipeId } });
   return NextResponse.json({ liked: false, favoritesCount });

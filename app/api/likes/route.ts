@@ -11,7 +11,6 @@ async function getUserId(): Promise<number | null> {
   return Number.isFinite(n) ? n : null;
 }
 
-// GET /api/likes?commentId=123
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
   const commentId = Number(searchParams.get("commentId"));
@@ -22,7 +21,6 @@ export async function GET(req: Request) {
   return NextResponse.json({ count });
 }
 
-// POST /api/likes { commentId, action?: 'like' | 'unlike' | 'toggle' }
 export async function POST(req: Request) {
   const userId = await getUserId();
   if (!userId) return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
@@ -41,7 +39,6 @@ export async function POST(req: Request) {
   const comment = await prisma.comment.findUnique({ where: { id: commentId } });
   if (!comment) return NextResponse.json({ error: "Commentaire introuvable" }, { status: 404 });
 
-  // clé composite (@@id([userId, commentId]))
   const key = { userId_commentId: { userId, commentId } } as const;
 
   if (action === "like") {

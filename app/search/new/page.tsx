@@ -1,10 +1,8 @@
-// app/recipes/page.tsx
 import React from "react";
 import Link from "next/link";
 import Image from "next/image";
 
 export default async function RecipesPage() {
-  // On fait un fetch côté serveur (Server Component) pour charger la liste initiale
   const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/recipes`, { cache: "no-store" });
   const recipes: Array<{
     id: number;

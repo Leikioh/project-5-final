@@ -21,7 +21,7 @@ function isFavoriteState(v: unknown): v is FavoriteState {
 
 export default function LikeButton({ recipeId, className }: Props) {
   const [liked, setLiked] = React.useState(false);
-  const [count, setCount] = React.useState(0);
+  const [, setCount] = React.useState(0);
   const [busy, setBusy] = React.useState(false);
 
   // État initial
@@ -40,7 +40,7 @@ export default function LikeButton({ recipeId, className }: Props) {
           setCount(data.favoritesCount);
         }
       } catch {
-        /* ignore */
+    
       }
     })();
     return () => {
@@ -63,7 +63,7 @@ export default function LikeButton({ recipeId, className }: Props) {
       });
 
       if (!res.ok) {
-        // rollback
+      
         setLiked(!optimisticLiked);
         setCount((c) => (optimisticLiked ? Math.max(0, c - 1) : c + 1));
         if (res.status === 401) alert("Connecte-toi pour liker 👍");
@@ -76,7 +76,7 @@ export default function LikeButton({ recipeId, className }: Props) {
         setCount(data.favoritesCount);
       }
     } catch {
-      // rollback si erreur réseau
+
       setLiked(!optimisticLiked);
       setCount((c) => (optimisticLiked ? Math.max(0, c - 1) : c + 1));
     } finally {

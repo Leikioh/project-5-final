@@ -8,7 +8,6 @@ async function main() {
   await prisma.recipe.deleteMany({});
   await prisma.user.deleteMany({});
 
-  // 1) Créer l'utilisateur seed
   const passwordHash = await bcrypt.hash('password123', 10);
   const seedUser = await prisma.user.create({
     data: {
@@ -19,7 +18,6 @@ async function main() {
   });
   console.log('✅ Seed user ID:', seedUser.id);
 
-  // 2) Données des recettes
   const recipesData = [
     {
       title: 'Turkey Sloppy Joes',
@@ -337,10 +335,9 @@ async function main() {
     ],
   },
 
-    // You can continue the same for the remaining recipes...
+ 
   ];
 
-  // 3) Seed into database
   for (const data of recipesData) {
     await prisma.recipe.create({
       data: {

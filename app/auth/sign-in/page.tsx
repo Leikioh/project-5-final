@@ -88,7 +88,6 @@ const AuthPage: React.FC = () => {
         throw new Error(message);
       }
 
-      // Connexion auto
       const resLogin = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -118,9 +117,7 @@ const AuthPage: React.FC = () => {
   return (
     <div className="min-h-screen bg-white">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 py-8 md:py-12">
-        {/* Responsive: 1 col (mobile) -> 2 cols (md+) */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-10 items-stretch">
-          {/* FORM CARD */}
           <div className="w-full max-w-md md:max-w-lg mx-auto flex items-center">
             <div className="w-full bg-white rounded-2xl shadow p-6 sm:p-8">
               <motion.div
@@ -232,7 +229,6 @@ const AuthPage: React.FC = () => {
             </div>
           </div>
 
-          {/* IMAGE + OVERLAY CTA (le “Nouveau ? Créer un compte” est ICI dans la photo) */}
           <div className="relative h-56 xs:h-64 sm:h-72 md:h-auto rounded-3xl overflow-hidden">
             <Image
               src="/images/signOut.jpg"

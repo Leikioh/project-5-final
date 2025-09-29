@@ -1,4 +1,3 @@
-// app/api/auth/login/route.ts
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { compare } from "bcryptjs";
@@ -30,22 +29,21 @@ export async function POST(req: Request) {
   const user = await prisma.user.findUnique({ where: { email } });
 
   if (!user) {
-    // ⚠️ DEBUG: utilisateur introuvable
     return NextResponse.json({ error: "Utilisateur introuvable" }, { status: 401 });
   }
 
   if (!user.passwordHash || user.passwordHash.length < 20) {
-    // ⚠️ DEBUG: compte mal peuplé (pas de hash)
+  
     return NextResponse.json({ error: "Compte invalide (pas de mot de passe défini)" }, { status: 401 });
   }
 
   const ok = await compare(password, user.passwordHash).catch(() => false);
   if (!ok) {
-    // ⚠️ DEBUG: mauvais mot de passe
+    
     return NextResponse.json({ error: "Mot de passe incorrect" }, { status: 401 });
   }
 
-  // OK: on pose le cookie userId
+
   const c = await cookies();
   c.set("userId", String(user.id), {
     httpOnly: true,

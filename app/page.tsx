@@ -9,8 +9,6 @@ import  Footer  from "@/components/Footer";
 import LikeButton from "@/components/LikeButton";
 import { apiPath } from "@/lib/api";
 
-/* ── Types ──────────────────────────────────────────────────────────────── */
-
 type Recipe = {
   id: number;
   imageUrl: string | null;
@@ -27,20 +25,17 @@ type RecipesResponse =
     }
   | Recipe[];
 
-/* ── Petits composants UI ──────────────────────────────────────────────── */
 
 const Banner = () => (
-  <div className="relative mx-5 mt-20 rounded-xl overflow-hidden">
-    {/* hauteur responsive : min 220px, max 360px, ~42vw pour conserver 21:9 */}
-    <div className="relative w-full h-[clamp(220px,42vw,360px)]">
+  <div className="relative max-w-7xl mx-auto rounded-2xl overflow-hidden">
+    <div className="relative aspect-[64/23] md:aspect-[64/25] lg:aspect-[64/27]">
       <Image
         src="/images/banner_full_2560x1080.png"
         alt="Cooking banner"
         fill
-        priority
-        // Comme le conteneur suit le ratio 21:9, cover n'entraîne pas de recadrage.
         className="object-cover"
-        sizes="100vw"
+        sizes="(max-width: 1280px) 100vw, 1280px"
+        priority
       />
       <div className="absolute inset-0 bg-black/35" />
 
@@ -50,8 +45,7 @@ const Banner = () => (
             Choose from thousands of recipes
           </h1>
           <p className="mt-3 md:mt-4 text-base md:text-lg">
-            Appropriately integrate technically sound value with scalable
-            infomediaries negotiate sustainable strategic theme areas
+            Appropriately integrate technically sound value with scalable infomediaries…
           </p>
           <a
             href="/auth/sign-in"
@@ -241,7 +235,7 @@ function VideoSection() {
   );
 }
 
-/* 👉 NEW: Newsletter CTA (sous “Videos”) */
+
 function NewsletterCTA(): React.JSX.Element {
   const [email, setEmail] = React.useState("");
   const [status, setStatus] = React.useState<"idle" | "loading" | "success" | "error">("idle");
@@ -256,8 +250,6 @@ function NewsletterCTA(): React.JSX.Element {
     }
     setStatus("loading");
 
-    // 👉 Placeholder d’intégration : remplace par ton endpoint si besoin.
-    // ex: fetch(apiPath("/api/subscribe"), { method:"POST", body: JSON.stringify({ email:value }) })
     setTimeout(() => {
       setStatus("success");
       setEmail("");
@@ -307,7 +299,6 @@ function NewsletterCTA(): React.JSX.Element {
   );
 }
 
-/* ── Page ───────────────────────────────────────────────────────────────── */
 
 export default function Page() {
   const TAKE = 9;
@@ -404,7 +395,7 @@ export default function Page() {
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4 lg:gap-6">
                   {recipes.map((recipe: Recipe) => (
                     <Link key={recipe.id} href={`/recipes/${recipe.id}`} className="block">
-                      <article className="relative bg-white shadow rounded-lg overflow-hidden hover:bg-gray-50">
+                      <article className="relative bg-white shadow rounded-lg overflow-hidden hover:bg-gray-100">
                         <div className="relative aspect-[4/3]">
                           <Image
                             src={recipe.imageUrl ?? "/images/placeholder.jpg"}

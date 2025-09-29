@@ -8,8 +8,6 @@ import LikeButton from "@/components/LikeButton";
 import { apiPath } from "@/lib/api";
 import Footer from "@/components/Footer";
 
-/* ── Types ─────────────────────────────────────────────────────────────── */
-
 type Recipe = {
   id: number;
   title: string;
@@ -25,8 +23,6 @@ type PagedResponse = {
 };
 
 type RecipesResponse = PagedResponse | Recipe[];
-
-/* ── UI ────────────────────────────────────────────────────────────────── */
 
 function SearchBar({
   value,
@@ -104,18 +100,12 @@ function Pagination({
   );
 }
 
-/* ── Page ──────────────────────────────────────────────────────────────── */
-
 export default function SearchPage() {
   const TAKE = 12;
-
-  // query + pagination
   const [query, setQuery] = React.useState("");
   const lastQueryRef = React.useRef("");
   const [page, setPage] = React.useState(1);
   const [pageCount, setPageCount] = React.useState(1);
-
-  // data state
   const [recipes, setRecipes] = React.useState<Recipe[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
@@ -125,7 +115,6 @@ export default function SearchPage() {
       setLoading(true);
       setError(null);
 
-      // Essaye la pagination serveur
       const url = new URL(apiPath("/api/recipes"), window.location.origin);
       url.searchParams.set("page", String(p));
       url.searchParams.set("take", String(TAKE));
@@ -134,7 +123,6 @@ export default function SearchPage() {
       try {
         const res = await fetch(url.toString(), { cache: "no-store", credentials: "include" });
         if (!res.ok) {
-          // Fallback: le backend renvoie un tableau → filtre + slice côté client
           const res2 = await fetch(apiPath("/api/recipes"), { cache: "no-store" });
           if (!res2.ok) {
             setRecipes([]);
@@ -157,7 +145,6 @@ export default function SearchPage() {
 
         const data: RecipesResponse = await res.json();
         if (Array.isArray(data)) {
-          // Fallback tableau + filtre client
           const filtered = lastQueryRef.current
             ? data.filter((r) => r.title.toLowerCase().includes(lastQueryRef.current.toLowerCase()))
             : data;
@@ -167,7 +154,6 @@ export default function SearchPage() {
           const start = (p - 1) * TAKE;
           setRecipes(filtered.slice(start, start + TAKE));
         } else {
-          // Réponse paginée
           setRecipes(data.items);
           setPageCount(Math.max(1, data.pageCount));
         }
@@ -182,7 +168,6 @@ export default function SearchPage() {
     [TAKE]
   );
 
-  // chargement initial + changement de page
   React.useEffect(() => {
     void load(page, lastQueryRef.current);
   }, [page, load]);
@@ -230,7 +215,6 @@ export default function SearchPage() {
                     sizes="(max-width: 1024px) 100vw, 33vw"
                     priority
                   />
-                  {/* Le LikeButton stoppe la propagation dans son onClick */}
                   <LikeButton recipeId={r.id} className="absolute top-2 right-2 z-10" />
                 </div>
 

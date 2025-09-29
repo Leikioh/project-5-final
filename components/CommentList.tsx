@@ -1,4 +1,3 @@
-// components/CommentList.tsx
 import React from "react";
 
 export interface Comment {
@@ -9,11 +8,10 @@ export interface Comment {
 }
 
 interface CommentListProps {
-  comments?: Comment[];  // rendu optionnel
+  comments?: Comment[];
 }
 
 export default function CommentList({ comments }: CommentListProps) {
-  // On s’assure d’avoir un tableau (même vide) avant de faire .length
   if (!comments || comments.length === 0) {
     return <p className="text-gray-500">Pas encore de commentaires.</p>;
   }

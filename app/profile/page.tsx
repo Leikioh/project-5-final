@@ -4,7 +4,7 @@ import React, { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useCurrentUser } from "../hooks/useCurrentUser";
 
-export const dynamic = "force-dynamic"; // évite la pré-génération statique
+export const dynamic = "force-dynamic";
 
 export default function ProfilePage() {
   const router = useRouter();

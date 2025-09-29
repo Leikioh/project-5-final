@@ -10,8 +10,6 @@ import Footer from "@/components/Footer";
 import { apiPath } from "@/lib/api";
 import CommentsPanel from "@/components/CommentsPanel";
 
-/* ── Types ─────────────────────────────────────────────────────────────────── */
-
 type Step = { id: number; text: string };
 type Ingredient = { id: number; name: string };
 type Author = { id: number; name: string | null };
@@ -29,8 +27,6 @@ type RecipeAPI = {
   yield: string | null;
   _count?: { favorites: number; comments: number };
 };
-
-/* ── Sous-composant : suggestions aléatoires ──────────────────────────────── */
 
 function RandomRecipes({ currentId }: { currentId: number }): JSX.Element | null {
   type ListItem = {
@@ -139,16 +135,12 @@ function RandomRecipes({ currentId }: { currentId: number }): JSX.Element | null
   );
 }
 
-/* ── Page détail ───────────────────────────────────────────────────────────── */
-
 export default function RecipeDetailPage(): JSX.Element {
   const { id } = useParams<{ id: string }>();
   const recipeId = Number(id);
-
   const [recipe, setRecipe] = useState<RecipeAPI | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
 
-  // Charger uniquement la recette (les commentaires sont gérés par CommentsPanel)
   useEffect(() => {
     if (!Number.isFinite(recipeId)) return;
 
@@ -211,7 +203,6 @@ export default function RecipeDetailPage(): JSX.Element {
 
   return (
     <main className="max-w-6xl mx-auto px-4 py-8">
-      {/* Image + Title */}
       <div className="relative w-full h-[400px] rounded-lg overflow-hidden mb-8 shadow-lg">
         <Image
           src={recipe.imageUrl ?? "/images/placeholder.jpg"}
@@ -234,10 +225,8 @@ export default function RecipeDetailPage(): JSX.Element {
         )}
       </p>
 
-      {/* Description */}
       {recipe.description && <p className="text-lg text-gray-800 mb-8">{recipe.description}</p>}
 
-      {/* Stats */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-10">
         <div className="md:col-span-3">
           <div className="flex flex-wrap gap-6 my-4">
@@ -263,7 +252,6 @@ export default function RecipeDetailPage(): JSX.Element {
       </div>
 
       <div className="flex flex-col md:flex-row gap-8">
-        {/* How to make it */}
         <section className="flex-1">
           <h2 className="text-2xl text-gray-700 font-bold mb-4">How to Make It</h2>
           <ol className="list-decimal list-inside space-y-3">
@@ -275,7 +263,6 @@ export default function RecipeDetailPage(): JSX.Element {
           </ol>
         </section>
 
-        {/* Ingredients */}
         <aside className="w-full md:w-72 bg-white shadow rounded-lg p-6">
           <h2 className="text-xl text-gray-700 font-bold mb-4">Ingredients</h2>
           <ul className="list-disc list-inside space-y-2">
@@ -288,14 +275,12 @@ export default function RecipeDetailPage(): JSX.Element {
         </aside>
       </div>
 
-      {/* Comments (entièrement géré par CommentsPanel) */}
       {Number.isFinite(recipeId) && (
         <section className="mt-12">
           <CommentsPanel recipeId={recipeId} />
         </section>
       )}
-
-      {/* 4 recettes aléatoires */}
+      
       {Number.isFinite(recipeId) && <RandomRecipes currentId={recipeId} />}
       <Footer />
     </main>

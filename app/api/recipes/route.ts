@@ -1,4 +1,3 @@
-// app/api/recipes/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma"; // ← default import
 
@@ -11,7 +10,6 @@ function getUserId(req: NextRequest): number | null {
   return Number.isFinite(n) ? n : null;
 }
 
-// Typage propre du body
 type CreateRecipeBody = {
   title?: string;
   description?: string | null;
@@ -23,7 +21,6 @@ type CreateRecipeBody = {
   ingredients?: string[];
 };
 
-// GET /api/recipes?q=mot
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const q = (searchParams.get("q") ?? "").trim();
@@ -32,8 +29,8 @@ export async function GET(req: NextRequest) {
     where: q
       ? {
           OR: [
-            { title: { contains: q } },        // ← pas de "mode" avec MySQL
-            { description: { contains: q } },  // ← idem
+            { title: { contains: q } },
+            { description: { contains: q } },
           ],
         }
       : undefined,
@@ -47,8 +44,6 @@ export async function GET(req: NextRequest) {
   return NextResponse.json(recipes);
 }
 
-// POST /api/recipes
-// Body: { title: string, description?, imageUrl?, activeTime?, totalTime?, yield?, steps?: string[], ingredients?: string[] }
 export async function POST(req: NextRequest) {
   const userId = getUserId(req);
   if (!userId) return NextResponse.json({ error: "Non authentifié" }, { status: 401 });

@@ -3,11 +3,9 @@
 import React from "react";
 import Image from "next/image";
 import Link from "next/link";
-
 import LikeButton from "@/components/LikeButton";
 import { apiPath } from "@/lib/api";
 
-/* Types */
 type Author = { id: number; name: string | null };
 type Recipe = { id: number; title: string; imageUrl: string | null; author: Author };
 
@@ -19,12 +17,9 @@ type PagedResponse = {
 };
 type RecipesResponse = PagedResponse | Recipe[];
 
-/* Helpers */
-
 const pickRandom = (arr: Recipe[]): Recipe | null =>
   arr.length ? arr[Math.floor(Math.random() * arr.length)] : null;
 
-/* Page */
 export default function RecipesRandomizerPage(): React.JSX.Element {
   const [recipe, setRecipe] = React.useState<Recipe | null>(null);
   const [loading, setLoading] = React.useState(true);
@@ -34,7 +29,6 @@ export default function RecipesRandomizerPage(): React.JSX.Element {
     setLoading(true);
     setError(null);
     try {
-      // 1) Endpoint dédié (s'il existe)
       const r1 = await fetch(apiPath("/api/recipes/random"), {
         cache: "no-store",
         credentials: "include",
@@ -44,8 +38,6 @@ export default function RecipesRandomizerPage(): React.JSX.Element {
         setRecipe(one ?? null);
         return;
       }
-
-      // 2) Fallback: tirer au hasard depuis la liste
       const r2 = await fetch(apiPath("/api/recipes"), { cache: "no-store" });
       if (!r2.ok) {
         setRecipe(null);

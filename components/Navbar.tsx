@@ -27,8 +27,6 @@ export default function Navbar() {
     <header className="sticky top-0 z-40 w-full bg-white/90 backdrop-blur border-b border-gray-100">
       <nav className="mx-auto max-w-7xl px-4 sm:px-6 h-16 flex items-center justify-between">
         
-
-        {/* Menu desktop */}
         <div className="hidden lg:flex items-center gap-6">
           <Link href="/" className="text-black hover:text-orange-500">Home</Link>
           <Link href="/recipes" className="text-black hover:text-orange-500">Recipes</Link>
@@ -36,7 +34,6 @@ export default function Navbar() {
           <Link href="/contact" className="text-black hover:text-orange-500">Contact</Link>
         </div>
 
-        {/* Actions desktop */}
         <div className="hidden lg:flex items-center gap-3">
           {loading ? (
             <span className="text-gray-500 text-sm">…</span>
@@ -73,7 +70,6 @@ export default function Navbar() {
           )}
         </div>
 
-        {/* Bouton mobile */}
         <button
           onClick={() => setOpen((v) => !v)}
           className="lg:hidden inline-flex items-center justify-center rounded-md p-2 text-gray-700 hover:bg-gray-100"
@@ -84,7 +80,6 @@ export default function Navbar() {
         </button>
       </nav>
 
-      {/* Menu mobile */}
       {open && (
         <div className="lg:hidden border-t border-gray-100 bg-white">
           <div className="mx-auto max-w-7xl px-4 sm:px-6 py-3 grid gap-1">

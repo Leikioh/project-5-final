@@ -7,8 +7,8 @@ export type AuthUser = { id: number; email: string; name: string | null };
 export type AuthContextType = {
   me: AuthUser | null;
   loading: boolean;
-  login: () => Promise<void>;   // recharge /me après un login réussi
-  logout: () => Promise<void>;  // appelle /api/auth/logout puis remet me=null
+  login: () => Promise<void>;
+  logout: () => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -35,7 +35,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [loadMe]);
 
   const login = useCallback(async () => {
-    // à appeler juste après un POST /api/auth/login OK
     await loadMe();
   }, [loadMe]);
 

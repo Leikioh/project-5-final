@@ -1,11 +1,9 @@
-// app/api/comments/route.ts
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { cookies } from "next/headers";
 
 export const runtime = "nodejs";
 
-/* ─ helpers ─ */
 function toInt(v: string | null): number | null {
   const n = v ? Number(v) : NaN;
   return Number.isFinite(n) ? n : null;
@@ -18,7 +16,6 @@ async function getUserId(): Promise<number | null> {
   return Number.isFinite(n) ? n : null;
 }
 
-/* ─ GET /api/comments?recipeId=ID[&page=1&take=10] ─ */
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
   const recipeId = toInt(searchParams.get("recipeId"));
@@ -43,7 +40,6 @@ export async function GET(req: Request) {
     }),
   ]);
 
-  // indique si l'utilisateur courant a liké chaque commentaire (facultatif)
   const uid = await getUserId();
   let likedMap: Record<number, boolean> = {};
   if (uid && rows.length) {
@@ -66,7 +62,6 @@ export async function GET(req: Request) {
   return NextResponse.json({ items, total, page, pageCount });
 }
 
-/* ─ POST /api/comments  body: { recipeId, content } ─ */
 export async function POST(req: Request) {
   const userId = await getUserId();
   if (!userId) return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
@@ -102,7 +97,6 @@ export async function POST(req: Request) {
   return NextResponse.json(comment, { status: 201 });
 }
 
-/* (optionnel) pour éviter 405 preflight sur certains clients */
 export async function OPTIONS() {
   return NextResponse.json({ ok: true });
 }
