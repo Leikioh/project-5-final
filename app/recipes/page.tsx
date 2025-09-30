@@ -67,7 +67,7 @@ export default function RecipesRandomizerPage(): React.JSX.Element {
         {error && <p className="text-red-500">{error}</p>}
 
         {!loading && !error && !recipe && (
-          <p className="text-gray-500">Aucune recette disponible.</p>
+          <p className="text-gray-500">No recipe found.</p>
         )}
 
         {!loading && !error && recipe && (
@@ -91,14 +91,14 @@ export default function RecipesRandomizerPage(): React.JSX.Element {
               href={`/recipes/${recipe.id}`}
               className="block bg-orange-500 text-white px-6 py-2 rounded-lg shadow hover:bg-orange-600 transition mb-3 w-full"
             >
-              Voir cette recette
+              See this recipe ?
             </Link>
 
             <button
               onClick={() => void loadRandom()}
               className="w-full border border-orange-500 text-orange-500 px-6 py-2 rounded-lg hover:bg-orange-50 transition"
             >
-              Une autre recette ?
+              An other recipe ?
             </button>
           </div>
         )}

@@ -158,10 +158,10 @@ function Pagination({
 
 function VideoSection() {
   const videos = [
-    { src: "/videos/video1.mp4", title: "Cooking with Tomatoes" },
-    { src: "/videos/video2.mp4", title: "Dessert in 5 minutes" },
+    { src: "/videos/video1.mp4", title: "Japanese Restaurant Meet" },
+    { src: "/videos/video2.mp4", title: "Indian Tajine" },
     { src: "/videos/video3.mp4", title: "Healthy Breakfast Ideas" },
-    { src: "/videos/video4.mp4", title: "Dinner for Two" },
+    { src: "/videos/video4.mp4", title: "Perfect Egg" },
   ];
   const [modalVideo, setModalVideo] = React.useState<string | null>(null);
   const videoRef = React.useRef<HTMLVideoElement | null>(null);
