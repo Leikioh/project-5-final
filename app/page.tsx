@@ -161,7 +161,7 @@ function VideoSection() {
     { src: "/videos/video1.mp4", title: "Japanese Restaurant Meet" },
     { src: "/videos/video2.mp4", title: "Indian Tajine" },
     { src: "/videos/video3.mp4", title: "Healthy Breakfast Ideas" },
-    { src: "/videos/video4.mp4", title: "Perfect Egg" },
+    { src: "/videos/video4.mp4", title: "Perfect egg" },
   ];
   const [modalVideo, setModalVideo] = React.useState<string | null>(null);
   const videoRef = React.useRef<HTMLVideoElement | null>(null);
