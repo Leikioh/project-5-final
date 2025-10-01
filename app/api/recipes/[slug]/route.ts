@@ -1,3 +1,4 @@
+// app/api/recipes/[slug]/favorite/route.ts
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { cookies } from "next/headers";
@@ -11,21 +12,24 @@ async function getUserId(): Promise<number | null> {
   return Number.isFinite(n) ? n : null;
 }
 
+async function resolveRecipeId(slugOrId: string): Promise<number | null> {
+  const asNum = Number(slugOrId);
+  if (Number.isFinite(asNum)) return asNum;
+  const r = await prisma.recipe.findUnique({ where: { slug: slugOrId }, select: { id: true } });
+  return r?.id ?? null;
+}
+
 export async function GET(
   _req: Request,
-  context: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ slug: string }> }
 ) {
-  const { id } = await context.params;
-  const recipeId = Number(id);
-  if (!Number.isFinite(recipeId)) {
-    return NextResponse.json({ error: "ID invalide" }, { status: 400 });
-  }
+  const { slug } = await params;
+  const recipeId = await resolveRecipeId(slug);
+  if (!recipeId) return NextResponse.json({ error: "Introuvable" }, { status: 404 });
 
   const userId = await getUserId();
   const liked = userId
-    ? !!(await prisma.favorite.findUnique({
-        where: { userId_recipeId: { userId, recipeId } },
-      }))
+    ? !!(await prisma.favorite.findUnique({ where: { userId_recipeId: { userId, recipeId } } }))
     : false;
 
   const favoritesCount = await prisma.favorite.count({ where: { recipeId } });
@@ -34,16 +38,14 @@ export async function GET(
 
 export async function POST(
   _req: Request,
-  context: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ slug: string }> }
 ) {
   const userId = await getUserId();
   if (!userId) return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
 
-  const { id } = await context.params;
-  const recipeId = Number(id);
-  if (!Number.isFinite(recipeId)) {
-    return NextResponse.json({ error: "ID invalide" }, { status: 400 });
-  }
+  const { slug } = await params;
+  const recipeId = await resolveRecipeId(slug);
+  if (!recipeId) return NextResponse.json({ error: "Introuvable" }, { status: 404 });
 
   await prisma.favorite.upsert({
     where: { userId_recipeId: { userId, recipeId } },
@@ -57,20 +59,18 @@ export async function POST(
 
 export async function DELETE(
   _req: Request,
-  context: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ slug: string }> }
 ) {
   const userId = await getUserId();
   if (!userId) return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
 
-  const { id } = await context.params;
-  const recipeId = Number(id);
-  if (!Number.isFinite(recipeId)) {
-    return NextResponse.json({ error: "ID invalide" }, { status: 400 });
-  }
+  const { slug } = await params;
+  const recipeId = await resolveRecipeId(slug);
+  if (!recipeId) return NextResponse.json({ error: "Introuvable" }, { status: 404 });
 
-  await prisma.favorite.delete({
-    where: { userId_recipeId: { userId, recipeId } },
-  }).catch(() => undefined);
+  await prisma.favorite
+    .delete({ where: { userId_recipeId: { userId, recipeId } } })
+    .catch(() => undefined);
 
   const favoritesCount = await prisma.favorite.count({ where: { recipeId } });
   return NextResponse.json({ liked: false, favoritesCount });

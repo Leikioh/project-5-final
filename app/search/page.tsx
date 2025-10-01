@@ -7,12 +7,14 @@ import { FaSearch } from "react-icons/fa";
 import LikeButton from "@/components/LikeButton";
 import { apiPath } from "@/lib/api";
 import Footer from "@/components/Footer";
+import Pagination from "@/components/Pagination";
 
 type Recipe = {
   id: number;
   title: string;
   imageUrl: string | null;
   author: { id: number; name: string | null };
+  slug: string;
 };
 
 type PagedResponse = {
@@ -36,7 +38,7 @@ function SearchBar({
   return (
     <div className="max-w-5xl mx-auto px-4 mb-12 mt-10">
       <div className="bg-[#fef7f7] border border-gray-200 rounded-lg flex items-center px-4 py-3 shadow-sm">
-        <FaSearch className="text-gray-400 mr-3" />
+        <FaSearch className="text-gray-400 mr-3" aria-hidden="true" />
         <input
           type="text"
           placeholder="Search for recipes..."
@@ -46,6 +48,7 @@ function SearchBar({
             if (e.key === "Enter") onSubmit();
           }}
           className="flex-1 outline-none bg-transparent text-gray-800 placeholder-gray-500"
+          aria-label="Search recipes"
         />
         <button
           onClick={onSubmit}
@@ -54,48 +57,6 @@ function SearchBar({
           Search
         </button>
       </div>
-    </div>
-  );
-}
-
-function Pagination({
-  page,
-  pageCount,
-  onChange,
-}: {
-  page: number;
-  pageCount: number;
-  onChange: (p: number) => void;
-}) {
-  if (pageCount <= 1) return null;
-  const pages = Array.from({ length: pageCount }, (_, i) => i + 1);
-  return (
-    <div className="flex justify-center mt-10 space-x-2">
-      <button
-        onClick={() => onChange(Math.max(1, page - 1))}
-        disabled={page === 1}
-        className="px-3 py-1 bg-gray-200 text-black rounded hover:bg-orange-500 hover:text-white disabled:opacity-50"
-      >
-        «
-      </button>
-      {pages.map((n) => (
-        <button
-          key={n}
-          onClick={() => onChange(n)}
-          className={`px-3 py-1 rounded ${
-            n === page ? "bg-orange-500 text-white" : "bg-gray-100 hover:bg-orange-500 hover:text-white"
-          }`}
-        >
-          {n}
-        </button>
-      ))}
-      <button
-        onClick={() => onChange(Math.min(pageCount, page + 1))}
-        disabled={page === pageCount}
-        className="px-3 py-1 bg-gray-200 text-black rounded hover:bg-orange-500 hover:text-white disabled:opacity-50"
-      >
-        »
-      </button>
     </div>
   );
 }
@@ -146,7 +107,9 @@ export default function SearchPage() {
         const data: RecipesResponse = await res.json();
         if (Array.isArray(data)) {
           const filtered = lastQueryRef.current
-            ? data.filter((r) => r.title.toLowerCase().includes(lastQueryRef.current.toLowerCase()))
+            ? data.filter((r) =>
+                r.title.toLowerCase().includes(lastQueryRef.current.toLowerCase())
+              )
             : data;
           const total = filtered.length;
           const pc = Math.max(1, Math.ceil(total / TAKE));
@@ -180,7 +143,6 @@ export default function SearchPage() {
 
   return (
     <main className="max-w-6xl mx-auto px-6 py-8">
-      
       <div className="text-center mb-6 mt-20">
         <h1 className="text-4xl font-bold text-gray-800">Search Recipes</h1>
         <p className="text-gray-500 mt-2">Find your next favorite meal</p>
@@ -193,7 +155,9 @@ export default function SearchPage() {
 
       {!loading && !error && recipes.length === 0 && (
         <p className="text-center text-gray-500">
-          {lastQueryRef.current ? `No results for “${lastQueryRef.current}”.` : "No recipes available."}
+          {lastQueryRef.current
+            ? `No results for “${lastQueryRef.current}”.`
+            : "No recipes available."}
         </p>
       )}
 
@@ -203,7 +167,7 @@ export default function SearchPage() {
             {recipes.map((r) => (
               <Link
                 key={r.id}
-                href={`/recipes/${r.id}`}
+                href={`/recipes/${r.slug}`}
                 className="bg-white rounded-lg shadow hover:shadow-lg transition overflow-hidden block"
               >
                 <div className="relative h-48">
@@ -215,7 +179,10 @@ export default function SearchPage() {
                     sizes="(max-width: 1024px) 100vw, 33vw"
                     priority
                   />
-                  <LikeButton recipeId={r.id} className="absolute top-2 right-2 z-10" />
+                  <LikeButton
+                    recipeSlug={r.slug}
+                    className="absolute top-2 right-2 z-10"
+                  />
                 </div>
 
                 <div className="p-4">
@@ -228,10 +195,16 @@ export default function SearchPage() {
             ))}
           </div>
 
-          <Pagination page={page} pageCount={pageCount} onChange={setPage} />
-          <Footer />
+          {/* ✅ Nouvelle API du composant Pagination */}
+          <Pagination
+            currentPage={page}
+            totalPages={pageCount}
+            onPageChange={setPage}
+          />
         </>
       )}
+
+      <Footer />
     </main>
   );
 }

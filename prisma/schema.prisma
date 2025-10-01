@@ -37,7 +37,8 @@ model Recipe {
   ingredients Ingredient[]
   activeTime   String?      
   totalTime    String?      
-  yield        String? 
+  yield        String?
+  updatedAt   DateTime @default(now()) @updatedAt
 }
 
 model Step {

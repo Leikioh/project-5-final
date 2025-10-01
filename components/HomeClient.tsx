@@ -25,11 +25,11 @@ type RecipesResponse =
 
 /* ── Banner ── */
 const Banner = () => (
-  <div className="relative max-w-7xl mx-auto rounded-2xl overflow-hidden" role="img" aria-label="Bannière CookHub avec plats appétissants">
+  <div className="relative max-w-7xl mx-auto rounded-2xl overflow-hidden">
     <div className="relative aspect-[64/23] md:aspect-[64/25] lg:aspect-[64/27]">
       <Image
         src="/images/banner_full_2560x1080.png"
-        alt="Assortiment de plats en bannière"
+        alt="Bannière : découvrez des milliers de recettes"
         fill
         className="object-cover"
         sizes="(max-width: 1280px) 100vw, 1280px"
@@ -60,18 +60,20 @@ const Banner = () => (
 const Sidebar = () => {
   const [isOpen, setIsOpen] = React.useState(false);
   return (
-    <aside className="bg-white p-6 rounded-lg w-full lg:w-64" aria-label="Filtres recettes">
-      <h2 className="text-3xl font-bold mb-6 text-gray-950">Recipes</h2>
+    <aside className="bg-white p-6 rounded-lg w-full lg:w-64" aria-labelledby="recipes-filters-title">
+      <h2 id="recipes-filters-title" className="text-3xl font-bold mb-6 text-gray-950">
+        Recipes
+      </h2>
       <button
         className="w-full text-left font-bold text-gray-800 flex justify-between items-center"
         onClick={() => setIsOpen((v) => !v)}
         aria-expanded={isOpen}
-        aria-controls="filters-dish-type"
+        aria-controls="filter-dish-type"
       >
-        Dish Type <span aria-hidden>{isOpen ? "-" : "+"}</span>
+        Dish Type <span aria-hidden>{isOpen ? "−" : "+"}</span>
       </button>
       {isOpen && (
-        <ul id="filters-dish-type" className="mt-3 space-y-3 text-gray-700">
+        <ul id="filter-dish-type" className="mt-3 space-y-3 text-gray-700">
           {["Appetizers", "Bread", "Cake", "Casserole", "Main Dishes", "Pasta"].map((cat) => (
             <li key={cat}>
               <a href="#" className="hover:text-orange-500">
@@ -85,31 +87,46 @@ const Sidebar = () => {
   );
 };
 
-/* ── Search ── */
+/* ── Search (a11y: role="search") ── */
 function SearchBar({
-  value, onChange, onSubmit,
-}: { value: string; onChange: (v: string) => void; onSubmit: () => void }) {
+  value,
+  onChange,
+  onSubmit,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  onSubmit: () => void;
+}) {
   return (
-    <div className="w-full flex justify-between items-center bg-white shadow-md rounded-lg p-4 mt-10 max-w-7xl mx-auto">
-      <label htmlFor="home-search" className="sr-only">Search for recipes</label>
+    <form
+      role="search"
+      aria-label="Search recipes"
+      onSubmit={(e) => {
+        e.preventDefault();
+        onSubmit();
+      }}
+      className="w-full bg-white shadow-md rounded-lg p-4 mt-10 max-w-7xl mx-auto flex items-center gap-3"
+    >
+      <label htmlFor="q" className="sr-only">
+        Search recipes
+      </label>
       <input
-        id="home-search"
+        id="q"
         type="search"
+        inputMode="search"
         className="w-full px-4 py-2 outline-none border-none text-black"
-        placeholder="Search for recipes..."
+        placeholder="Search for recipes…"
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        onKeyDown={(e) => { if (e.key === "Enter") onSubmit(); }}
-        aria-label="Search recipes"
       />
       <button
-        onClick={onSubmit}
-        className="bg-orange-500 p-3 text-white rounded-lg"
-        aria-label="Submit search"
+        type="submit"
+        className="bg-orange-500 px-4 py-2 text-white rounded-lg font-medium"
+        aria-label="Search"
       >
-        <FaSearch />
+        <FaSearch aria-hidden />
       </button>
-    </div>
+    </form>
   );
 }
 
@@ -132,16 +149,14 @@ function VideoSection() {
   }, [modalVideo]);
 
   return (
-    <section className="max-w-7xl mx-auto mt-12 px-9" aria-labelledby="videos-title">
-      <h2 id="videos-title" className="text-3xl font-bold mb-6 text-gray-950">Videos</h2>
+    <section className="max-w-7xl mx-auto mt-12 px-9">
+      <h2 className="text-3xl font-bold mb-6 text-gray-950">Videos</h2>
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
         {videos.map((video, index) => (
           <div
             key={index}
             className="relative rounded-xl overflow-hidden shadow-xl group cursor-pointer"
             onClick={() => setModalVideo(video.src)}
-            role="button" aria-label={`Play video: ${video.title}`} tabIndex={0}
-            onKeyDown={(e) => e.key === "Enter" && setModalVideo(video.src)}
           >
             <video
               src={video.src}
@@ -165,13 +180,20 @@ function VideoSection() {
       <AnimatePresence>
         {modalVideo && (
           <motion.div
-            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
             className="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50"
-            role="dialog" aria-modal="true" aria-label="Video modal"
           >
-            <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }} className="relative w-full max-w-3xl p-4">
-              <button onClick={() => setModalVideo(null)} className="absolute top-2 right-2 text-white text-xl" aria-label="Close video">
-                <FaTimes />
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="relative w-full max-w-3xl p-4"
+            >
+              <button onClick={() => setModalVideo(null)} className="absolute top-2 right-2 text-white text-xl">
+                <FaTimes aria-hidden />
+                <span className="sr-only">Close video</span>
               </button>
               <motion.video
                 ref={videoRef}
@@ -198,26 +220,37 @@ function NewsletterCTA(): React.JSX.Element {
     e.preventDefault();
     const value = email.trim();
     const valid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
-    if (!valid) { setStatus("error"); return; }
+    if (!valid) {
+      setStatus("error");
+      return;
+    }
     setStatus("loading");
-    setTimeout(() => { setStatus("success"); setEmail(""); }, 600);
+    setTimeout(() => {
+      setStatus("success");
+      setEmail("");
+    }, 600);
   };
 
   return (
-    <section className="max-w-6xl mx-auto mt-12 px-6" aria-labelledby="newsletter-title">
+    <section className="max-w-6xl mx-auto mt-12 px-6">
       <div className="bg-orange-500 rounded-2xl px-8 py-10 md:px-12 md:py-12 text-center shadow-lg">
-        <h2 id="newsletter-title" className="text-white text-2xl md:text-3xl font-bold leading-snug">
+        <h3 className="text-white text-2xl md:text-3xl font-bold leading-snug">
           Be the first to know about the latest deals,
           <br className="hidden md:block" /> receive new trending recipes &amp; more!
-        </h2>
+        </h3>
 
-        <form onSubmit={submit} className="mt-7 flex flex-col sm:flex-row items-center gap-3 sm:gap-4 justify-center" noValidate>
-          <label htmlFor="newsletter-email" className="sr-only">Email Address</label>
+        <form onSubmit={submit} className="mt-7 flex flex-col sm:flex-row items-center gap-3 sm:gap-4 justify-center">
+          <label htmlFor="newsletter-email" className="sr-only">
+            Email Address
+          </label>
           <input
             id="newsletter-email"
             type="email"
             value={email}
-            onChange={(e) => { setEmail(e.target.value); if (status !== "idle") setStatus("idle"); }}
+            onChange={(e) => {
+              setEmail(e.target.value);
+              if (status !== "idle") setStatus("idle");
+            }}
             placeholder="Email Address"
             className="w-full sm:w-[380px] px-5 py-3 rounded-full bg-transparent border border-white/70 placeholder-white/90 text-white focus:outline-none focus:ring-2 focus:ring-white"
             aria-invalid={status === "error"}
@@ -241,7 +274,7 @@ function NewsletterCTA(): React.JSX.Element {
   );
 }
 
-/* ── Page (logique client) ── */
+/* ── Page client ── */
 export default function HomeClient() {
   const TAKE = 9;
   const [page, setPage] = React.useState(1);
@@ -253,7 +286,9 @@ export default function HomeClient() {
   const lastSearchRef = React.useRef("");
 
   const load = React.useCallback(async (p: number, q: string) => {
-    setLoading(true); setError(null);
+    setLoading(true);
+    setError(null);
+
     const url = new URL(apiPath("/api/recipes"), window.location.origin);
     url.searchParams.set("page", String(p));
     url.searchParams.set("take", String(TAKE));
@@ -264,12 +299,12 @@ export default function HomeClient() {
       if (!res.ok) {
         const res2 = await fetch(apiPath("/api/recipes"), { cache: "no-store" });
         const data2: RecipesResponse = await res2.json();
-        const list = Array.isArray(data2) ? data2 : data2.items;
-        const total = list.length;
+        const arr = Array.isArray(data2) ? data2 : data2.items;
+        const total = arr.length;
         const pc = Math.max(1, Math.ceil(total / TAKE));
         setPageCount(pc);
         const start = (p - 1) * TAKE;
-        setRecipes(list.slice(start, start + TAKE));
+        setRecipes(arr.slice(start, start + TAKE));
         return;
       }
       const data: RecipesResponse = await res.json();
@@ -291,7 +326,9 @@ export default function HomeClient() {
     }
   }, []);
 
-  React.useEffect(() => { void load(page, lastSearchRef.current); }, [page, load]);
+  React.useEffect(() => {
+    void load(page, lastSearchRef.current);
+  }, [page, load]);
 
   const triggerSearch = React.useCallback(() => {
     lastSearchRef.current = search;
@@ -304,10 +341,9 @@ export default function HomeClient() {
       <Banner />
       <SearchBar value={search} onChange={setSearch} onSubmit={triggerSearch} />
 
-      <div className="container mx-auto py-10">
+      <main className="container mx-auto py-10" role="main">
         <div className="flex flex-col lg:flex-row gap-6 mt-6 max-w-7xl mx-auto">
           <Sidebar />
-
           <div className="flex-1">
             {loading && <div className="text-center text-gray-500 text-lg py-10">Loading…</div>}
             {error && <div className="text-center text-red-500 text-lg py-10">{error}</div>}
@@ -318,14 +354,17 @@ export default function HomeClient() {
 
             {!loading && !error && recipes.length > 0 && (
               <>
-                <section aria-label="Recipes list" className="grid grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4 lg:gap-6">
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4 lg:gap-6">
                   {recipes.map((recipe) => (
-                    <Link key={recipe.id} href={`/recipes/${recipe.slug}`} className="block" aria-label={`Open recipe: ${recipe.title}`}>
-                      <article className="relative bg-white shadow rounded-lg overflow-hidden hover:bg-gray-100">
+                    <Link key={recipe.id} href={`/recipes/${recipe.slug}`} className="block">
+                      <article
+                        className="relative bg-white shadow rounded-lg overflow-hidden hover:bg-gray-100"
+                        aria-label={`Recipe: ${recipe.title}`}
+                      >
                         <div className="relative aspect-[4/3]">
                           <Image
                             src={recipe.imageUrl ?? "/images/placeholder.jpg"}
-                            alt={`Photo of ${recipe.title}`}
+                            alt={recipe.title}
                             fill
                             className="object-cover"
                             sizes="(max-width: 768px) 50vw, (max-width: 1024px) 33vw, 300px"
@@ -344,14 +383,14 @@ export default function HomeClient() {
                       </article>
                     </Link>
                   ))}
-                </section>
+                </div>
 
                 <Pagination currentPage={page} totalPages={pageCount} onPageChange={setPage} />
               </>
             )}
           </div>
         </div>
-      </div>
+      </main>
 
       <VideoSection />
       <NewsletterCTA />

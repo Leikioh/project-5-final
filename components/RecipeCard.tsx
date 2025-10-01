@@ -11,27 +11,52 @@ export interface RecipeCardProps {
   title: string;
   rating: string;
   author: string;
+  slug: string; // utilisé pour la route & le like
 }
 
 export default function RecipeCard({
-  id, image, title, rating, author
+  id,
+  image,
+  title,
+  rating,
+  author,
+  slug,
 }: RecipeCardProps) {
+  const imgSrc = image || "/images/placeholder.jpg";
+
   return (
-    <Link href={`/recipes/${id}`} className="block">
-      <div className="relative bg-white shadow-lg rounded-lg overflow-hidden hover:bg-gray-100 cursor-pointer w-[300px] h-[300px]">
-        <div className="relative w-full h-40">
-          <Image src={image} alt={title} fill className="object-cover" />
+    <Link href={`/recipes/${slug}`} className="block" prefetch>
+      <article
+        className="relative bg-white shadow rounded-lg overflow-hidden hover:shadow-md hover:bg-gray-50 transition"
+        data-id={id}
+      >
+        {/* Image en ratio 4/3 pour rester responsive */}
+        <div className="relative w-full aspect-[4/3]">
+          <Image
+            src={imgSrc}
+            alt={title || "Recipe image"}
+            fill
+            className="object-cover"
+            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+            priority
+          />
+          {/* Like par SLUG → /api/recipes/[slug]/favorite */}
+          <LikeButton
+            recipeSlug={slug}
+            className="absolute top-2 right-2 bg-black/40 rounded-full p-2"
+          />
         </div>
-        <LikeButton
-          recipeId={id}
-          className="absolute top-2 right-2 bg-black bg-opacity-40 rounded-full p-2"
-        />
+
         <div className="p-4">
-          <h3 className="font-semibold">{title}</h3>
-          <p className="text-orange-500">⭐ {rating}</p>
-          <p className="text-gray-600">by {author}</p>
+          <h3 className="text-base sm:text-lg font-semibold text-gray-800 line-clamp-2">
+            {title}
+          </h3>
+          <div className="mt-1 flex items-center justify-between text-sm">
+            <p className="text-orange-500">⭐ {rating}</p>
+            <p className="text-gray-600">by {author || "Anonyme"}</p>
+          </div>
         </div>
-      </div>
+      </article>
     </Link>
   );
 }
