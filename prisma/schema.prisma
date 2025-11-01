@@ -20,6 +20,7 @@ model User {
   commentLikes  CommentLike[] // tous les likes de commentaire faits par cet user
   accounts      Account[]
   sessions      Session[]
+  role          Role          @default(USER)
 }
 
 model Recipe {
@@ -39,6 +40,11 @@ model Recipe {
   totalTime    String?      
   yield        String?
   updatedAt   DateTime @default(now()) @updatedAt
+  status      RecipeStatus @default(PENDING)
+  approvedAt  DateTime?
+  rejectedAt  DateTime?
+  deletedAt   DateTime?
+  status      RecipeStatus @default(PENDING)
 }
 
 model Step {
@@ -72,7 +78,9 @@ model Comment {
   recipe       Recipe        @relation(fields: [recipeId], references: [id])
   recipeId     Int
   createdAt    DateTime      @default(now())
-  commentLikes CommentLike[] // tous les likes reçus par ce commentaire
+  commentLikes CommentLike[]
+  hidden    Boolean  @default(false)
+  deletedAt DateTime?
 }
 
 model CommentLike {
@@ -116,4 +124,16 @@ model VerificationToken {
   expires    DateTime
 
   @@unique([identifier, token])
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+enum RecipeStatus {
+  DRAFT      // brouillon (création)
+  PENDING    // en attente de validation
+  APPROVED   // publiée
+  REJECTED   // refusée
 }
