@@ -24,39 +24,40 @@ model User {
 }
 
 model Recipe {
-  id          Int        @id @default(autoincrement())
-  title       String
-  slug        String?    @unique @db.VarChar(191)
-  description String?
+  id          Int         @id @default(autoincrement())
+  title       String      @db.VarChar(255) // optionnel mais propre
+  slug        String?     @unique @db.VarChar(191)
+  description String?     @db.Text        // ← plus large
   imageUrl    String?
-  createdAt   DateTime   @default(now())
-  author      User       @relation("AuthorRecipes", fields: [authorId], references: [id])
+  createdAt   DateTime    @default(now())
+  author      User        @relation("AuthorRecipes", fields: [authorId], references: [id])
   authorId    Int
   favorites   Favorite[]
   comments    Comment[]
   steps       Step[]
   ingredients Ingredient[]
-  activeTime   String?      
-  totalTime    String?      
-  yield        String?
-  updatedAt   DateTime @default(now()) @updatedAt
+  activeTime  String?
+  totalTime   String?
+  yield       String?
+  updatedAt   DateTime    @default(now()) @updatedAt
   status      RecipeStatus @default(PENDING)
   approvedAt  DateTime?
   rejectedAt  DateTime?
+  rejectionReason String? @db.Text
   deletedAt   DateTime?
-  status      RecipeStatus @default(PENDING)
 }
 
+
 model Step {
-  id        Int     @id @default(autoincrement())
-  text      String
-  recipeId  Int
-  recipe    Recipe  @relation(fields: [recipeId], references: [id])
+  id       Int     @id @default(autoincrement())
+  text     String  @db.Text
+  recipeId Int
+  recipe   Recipe  @relation(fields: [recipeId], references: [id])
 }
 
 model Ingredient {
   id        Int     @id @default(autoincrement())
-  name      String
+  name      String  @db.VarChar(255) // un peu plus large
   recipeId  Int
   recipe    Recipe  @relation(fields: [recipeId], references: [id])
 }
@@ -72,15 +73,15 @@ model Favorite {
 
 model Comment {
   id           Int           @id @default(autoincrement())
-  content      String
+  content      String        @db.Text   // ← souvent long aussi
   author       User          @relation(fields: [authorId], references: [id])
   authorId     Int
   recipe       Recipe        @relation(fields: [recipeId], references: [id])
   recipeId     Int
   createdAt    DateTime      @default(now())
   commentLikes CommentLike[]
-  hidden    Boolean  @default(false)
-  deletedAt DateTime?
+  hidden       Boolean       @default(false)
+  deletedAt    DateTime?
 }
 
 model CommentLike {

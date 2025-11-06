@@ -1,17 +1,26 @@
+import type { Metadata } from "next";
+import Link from "next/link";
+
+export const metadata: Metadata = {
+  robots: { index: false, follow: false, nocache: true },
+  title: "Admin | CookHub",
+};
+
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="min-h-screen bg-slate-50">
-      <header className="border-b bg-white">
-        <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
-          <h1 className="font-bold text-lg">Admin • CookHub</h1>
-          <nav className="flex gap-4 text-sm">
-            <a className="hover:underline" href="/admin">Dashboard</a>
-            <a className="hover:underline" href="/admin/recipes">Recettes</a>
-            <a className="hover:underline" href="/admin/comments">Commentaires</a>
-          </nav>
-        </div>
+    <section className="max-w-6xl mx-auto px-4 py-8">
+      <header className="flex items-center justify-between mb-6">
+        <h1 className="text-2xl text-black font-bold">Admin</h1>
+        <nav className="flex gap-3 text-sm">
+          <Link className="px-3 py-1 roundedinline-flex items-center rounded-md bg-orange-500 text-white hover:bg-orange-600" href="/admin/recipes">
+            Recipes
+          </Link>
+          <Link className="px-3 py-1 rounded inline-flex items-center  bg-black text-white hover:bg-gray-900" href="/admin/comments">
+            Comments
+          </Link>
+        </nav>
       </header>
-      <main className="max-w-6xl mx-auto px-4 py-6">{children}</main>
-    </div>
+      {children}
+    </section>
   );
 }

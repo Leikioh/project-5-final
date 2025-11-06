@@ -5,45 +5,40 @@ import { useAuth } from "@/app/context/AuthContext";
 import CommentForm from "@/components/CommentForm";
 
 type Author = { id: number; name: string | null; email: string };
-type Comment = {
-  id: number;
-  content: string;
-  createdAt: string;
-  author: Author;
+type CommentItem = { id: number; content: string; createdAt: string; author: Author };
+
+type Props = {
+  recipeId: number;            // ← toujours présent
+  recipeSlug?: string | null;  // ← optionnel (peut être null)
 };
 
-type ListResponse = { items: Comment[] } | Comment[];
-
-function normalizeList(data: ListResponse): Comment[] {
-  return Array.isArray(data) ? data : data.items;
-}
-
-export default function CommentsPanel({ recipeId }: { recipeId: number }) {
+export default function CommentsPanel({ recipeId, recipeSlug }: Props) {
   const { me, loading } = useAuth();
-  const [comments, setComments] = React.useState<Comment[]>([]);
-  const [pending, setPending] = React.useState<boolean>(true);
+  const [comments, setComments] = React.useState<CommentItem[]>([]);
+  const [pending, setPending] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
 
   const load = React.useCallback(async () => {
     setPending(true);
     setError(null);
     try {
-      const url = new URL("/api/comments", window.location.origin);
-      url.searchParams.set("recipeId", String(recipeId));
-      const res = await fetch(url.toString(), {
-        credentials: "include",
-        cache: "no-store",
-      });
-      if (!res.ok) throw new Error("Chargement des commentaires impossible");
-      const data: ListResponse = await res.json();
-      setComments(normalizeList(data));
+      const url = recipeSlug
+        ? `/api/recipes/${encodeURIComponent(recipeSlug)}/comments`
+        : `/api/comments?recipeId=${recipeId}`;
+
+      const res = await fetch(url, { cache: "no-store", credentials: "include" });
+      if (!res.ok) throw new Error(`Failed to load comments (${res.status})`);
+      const json = (await res.json()) as { items: CommentItem[] } | CommentItem[];
+
+      const items = Array.isArray(json) ? json : json.items;
+      setComments(items);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Erreur de chargement");
       setComments([]);
     } finally {
       setPending(false);
     }
-  }, [recipeId]);
+  }, [recipeId, recipeSlug]);
 
   React.useEffect(() => { void load(); }, [load]);
 
@@ -60,25 +55,24 @@ export default function CommentsPanel({ recipeId }: { recipeId: number }) {
       {!pending && comments.length > 0 && (
         <ul className="space-y-4 mb-6">
           {comments.map((c) => (
-            <li key={c.id} className="border rounded p-3">
+            <li key={c.id} className="border rounded p-3 bg-white">
               <p className="text-sm text-gray-700 whitespace-pre-wrap">{c.content}</p>
               <p className="mt-1 text-xs text-gray-500">
-                by {c.author?.name ?? c.author?.email} • {new Date(c.createdAt).toLocaleString()}
+                by {c.author.name ?? c.author.email} • {new Date(c.createdAt).toLocaleString()}
               </p>
             </li>
           ))}
         </ul>
       )}
-      
+
       {loading ? (
         <p className="text-gray-500">Checking session…</p>
       ) : me ? (
+        // ✅ on garde CommentForm tel quel (il prend un recipeId: number)
         <CommentForm recipeId={recipeId} onPosted={load} />
       ) : (
         <p className="text-gray-700">🔒 Connecte-toi pour écrire un commentaire.</p>
       )}
     </section>
-    
   );
-  
 }

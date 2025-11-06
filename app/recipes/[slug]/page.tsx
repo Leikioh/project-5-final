@@ -277,7 +277,7 @@ export default async function RecipePage(
         {/* Commentaires */}
         <section className="mt-12">
           <h2 className="text-2xl text-black font-bold mb-4">Comments</h2>
-          <CommentsPanel recipeId={recipe.id} />
+          <CommentsPanel recipeId={recipe.id} recipeSlug={recipe.slug ?? undefined}/>
         </section>
 
         {/* Recettes similaires */}

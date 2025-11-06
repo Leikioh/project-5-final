@@ -1,16 +1,21 @@
-import prisma from "@/lib/prisma";
+// lib/auth.ts
 import { cookies } from "next/headers";
+import prisma from "@/lib/prisma";
 
-export async function getCurrentUser() {
-  const jar = await cookies();
-  const raw = jar.get("userId")?.value;
+export async function requireUser() {
+  const store = await cookies();
+  const raw = store.get("userId")?.value;
   const id = raw ? Number(raw) : NaN;
   if (!Number.isFinite(id)) return null;
-  return prisma.user.findUnique({ where: { id }, select: { id: true, name: true, role: true } });
+
+  return prisma.user.findUnique({
+    where: { id },
+    select: { id: true, email: true, name: true, role: true },
+  });
 }
 
-export async function requireAdmin(): Promise<{ id: number; role: "ADMIN" } | null> {
-  const u = await getCurrentUser();
-  if (!u || u.role !== "ADMIN") return null;
-  return { id: u.id, role: "ADMIN" };
+export async function requireAdmin() {
+  const user = await requireUser();
+  if (!user || user.role !== "ADMIN") return null;
+  return user;
 }
