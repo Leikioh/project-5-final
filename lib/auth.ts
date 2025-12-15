@@ -1,6 +1,7 @@
 // lib/auth.ts
 import { cookies } from "next/headers";
 import prisma from "@/lib/prisma";
+import type { NextAuthOptions } from "next-auth";
 
 export async function requireUser() {
   const store = await cookies();
@@ -19,3 +20,7 @@ export async function requireAdmin() {
   if (!user || user.role !== "ADMIN") return null;
   return user;
 }
+
+export const authOptions: NextAuthOptions = {
+  providers: []
+};
