@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { FaBars, FaTimes } from "react-icons/fa";
 import { useAuth } from "@/app/context/AuthContext";
@@ -23,22 +23,53 @@ export default function Navbar() {
       ? me.email.split("@")[0]
       : "";
 
+  const isActive = (href: string) => {
+    // Actif si le pathname commence par href (utile pour /recipes/slug)
+    if (href === "/") return pathname === "/";
+    return pathname.startsWith(href);
+  };
+
+  const NavItem = ({
+    href,
+    children,
+    onClick,
+  }: {
+    href: string;
+    children: React.ReactNode;
+    onClick?: () => void;
+  }) => {
+    const active = isActive(href);
+    return (
+      <Link
+        href={href}
+        onClick={onClick}
+        className={`text-sm transition-colors ${
+          active
+            ? "text-orange-600"
+            : "text-black hover:text-orange-500"
+        }`}
+        aria-current={active ? "page" : undefined}
+      >
+        {children}
+      </Link>
+    );
+  };
+
   return (
     <header className="sticky top-0 z-40 w-full bg-white/90 backdrop-blur border-b border-gray-100">
       <nav className="mx-auto max-w-7xl px-4 sm:px-6 h-16 flex items-center justify-between">
         {/* Liens gauche (desktop) */}
         <div className="hidden lg:flex items-center gap-6">
-          <Link href="/" className="text-black hover:text-orange-500">Home</Link>
-          <Link href="/recipes" className="text-black hover:text-orange-500">Recipes</Link>
-          <Link href="/search" className="text-black hover:text-orange-500">Search</Link>
-          <Link href="/contact" className="text-black hover:text-orange-500">Contact</Link>
+          <NavItem href="/">Home</NavItem>
+          <NavItem href="/recipes">Recipes</NavItem>
+          <NavItem href="/search">Search</NavItem>
+          <NavItem href="/contact">Contact</NavItem>
+
+          {/* Favoris (uniquement connecté) */}
+          {!loading && me && <NavItem href="/favorites">Favoris</NavItem>}
 
           {/* Lien Admin (uniquement admin) */}
-          {!loading && isAdmin && (
-            <Link href="/admin" className="text-black hover:text-orange-500">
-              Admin
-            </Link>
-          )}
+          {!loading && isAdmin && <NavItem href="/admin">Admin</NavItem>}
         </div>
 
         {/* Actions droite (desktop) */}
@@ -102,16 +133,23 @@ export default function Navbar() {
       {open && (
         <div className="lg:hidden border-t border-gray-100 bg-white">
           <div className="mx-auto max-w-7xl px-4 sm:px-6 py-3 grid gap-1">
-            <Link href="/" className="px-2 py-2 rounded text-black hover:bg-gray-100">Home</Link>
-            <Link href="/recipes" className="px-2 py-2 rounded text-black hover:bg-gray-100">Recipes</Link>
-            <Link href="/search" className="px-2 py-2 rounded text-black hover:bg-gray-100">Search</Link>
-            <Link href="/contact" className="px-2 py-2 rounded text-black hover:bg-gray-100">Contact</Link>
+            <NavItem href="/" onClick={() => setOpen(false)}>Home</NavItem>
+            <NavItem href="/recipes" onClick={() => setOpen(false)}>Recipes</NavItem>
+            <NavItem href="/search" onClick={() => setOpen(false)}>Search</NavItem>
+            <NavItem href="/contact" onClick={() => setOpen(false)}>Contact</NavItem>
 
-            {/* Lien Admin (mobile) */}
+            {/* Favoris (mobile) */}
+            {!loading && me && (
+              <NavItem href="/favorites" onClick={() => setOpen(false)}>
+                Favoris
+              </NavItem>
+            )}
+
+            {/* Admin (mobile) */}
             {!loading && isAdmin && (
-              <Link href="/admin" className="px-2 py-2 rounded text-black hover:bg-gray-100">
+              <NavItem href="/admin" onClick={() => setOpen(false)}>
                 Admin
-              </Link>
+              </NavItem>
             )}
 
             <div className="h-px bg-gray-100 my-1" />
@@ -145,11 +183,16 @@ export default function Navbar() {
               </>
             ) : (
               <>
-                <Link href="/auth/sign-in" className="px-2 py-2 rounded text-black hover:bg-gray-100">
+                <Link
+                  href="/auth/sign-in"
+                  onClick={() => setOpen(false)}
+                  className="px-2 py-2 rounded text-black hover:bg-gray-100"
+                >
                   Sign In
                 </Link>
                 <Link
                   href="/auth/register"
+                  onClick={() => setOpen(false)}
                   className="px-2 py-2 rounded text-center bg-orange-500 text-white hover:bg-orange-600"
                 >
                   Sign Up

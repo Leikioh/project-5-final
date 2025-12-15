@@ -70,7 +70,7 @@ export default function RecipesRandomizerPage(): React.JSX.Element {
   }, [loadRandom]);
 
   return (
-    <div className="min-h-screen bg-orange-50">
+    <div className="min-h-screen">
       <main className="max-w-6xl mx-auto px-6 pt-24 pb-16">
         {loading && (
           <div className="mx-auto max-w-md w-full animate-pulse">
@@ -87,7 +87,7 @@ export default function RecipesRandomizerPage(): React.JSX.Element {
         )}
 
         {!loading && !error && recipe && (
-          <div className="bg-white shadow-lg rounded-lg p-6 text-center max-w-md w-full mx-auto">
+          <div className="bg-orange-50 shadow-lg rounded-lg p-6 text-center max-w-md w-full mx-auto">
             <div className="relative w-full h-60 mb-4 rounded overflow-hidden">
               <Image
                 src={recipe.imageUrl ?? "/images/placeholder.jpg"}

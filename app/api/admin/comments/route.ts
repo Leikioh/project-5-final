@@ -30,15 +30,15 @@ export async function GET(req: Request) {
 
   const { page, take, q, visibility } = parsed.data;
 
-  // Laisse Prisma inférer le type du `where`
+  // ⚠️ Pas de `mode: "insensitive"` (non supporté par ton provider)
   const where = {
     deletedAt: null as Date | null,
     ...(q
       ? {
           OR: [
-            { content: { contains: q, mode: "insensitive" as const } },
-            { author: { name: { contains: q, mode: "insensitive" as const } } },
-            { recipe: { title: { contains: q, mode: "insensitive" as const } } },
+            { content: { contains: q } },
+            { author: { name: { contains: q } } },
+            { recipe: { title: { contains: q } } },
           ],
         }
       : {}),
@@ -48,14 +48,13 @@ export async function GET(req: Request) {
 
   const total = await prisma.comment.count({ where });
 
-  // Sélecteur “const” (pas de types Prisma nécessaires)
   const select = {
     id: true,
     content: true,
     hidden: true,
     createdAt: true,
     author: { select: { id: true, name: true, email: true } },
-    recipe: { select: { id: true, title: true, slug: true } },
+    recipe: { select: { id: true, title: true, slug: true} },
   } as const;
 
   const items = await prisma.comment.findMany({
@@ -66,8 +65,7 @@ export async function GET(req: Request) {
     select,
   });
 
-  // 👉 On déduit le type de chaque item depuis le résultat de Prisma
-  type CommentListItem = typeof items[number];
+  type CommentListItem = (typeof items)[number];
 
   const payload = items.map((c: CommentListItem) => ({
     id: c.id,

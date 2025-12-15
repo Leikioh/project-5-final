@@ -24,20 +24,23 @@ export async function GET(req: Request) {
     status: searchParams.get("status") ?? undefined,
     q: searchParams.get("q") ?? undefined,
   });
+
   if (!parsed.success) {
     return NextResponse.json({ error: "Bad Request" }, { status: 400 });
   }
 
   const { page, take, status, q } = parsed.data;
 
+  // ❌ SUPPRIMÉ `mode: 'insensitive'` (non supporté par ton provider)
   const where = {
     deletedAt: null as Date | null,
     ...(status ? { status } : {}),
     ...(q
       ? {
           OR: [
-            { title: { contains: q, mode: "insensitive" as const } },
-            { description: { contains: q, mode: "insensitive" as const } },
+            { title: { contains: q } },
+            { description: { contains: q } },
+            { slug: { contains: q } },
           ],
         }
       : {}),
@@ -51,7 +54,7 @@ export async function GET(req: Request) {
     slug: true,
     status: true,
     createdAt: true,
-    rejectionReason: true, // ✅ on sélectionne le motif
+    rejectionReason: true,
     author: { select: { id: true, name: true, email: true } },
   } as const;
 
@@ -60,10 +63,10 @@ export async function GET(req: Request) {
     orderBy: [{ status: "asc" }, { createdAt: "desc" }],
     skip: (page - 1) * take,
     take,
-    select, // ✅ ici, pas de clé “rejectionReason” à la racine
+    select,
   });
 
-  type RecipeListItem = typeof items[number];
+  type RecipeListItem = (typeof items)[number];
 
   const payload = items.map((r: RecipeListItem) => ({
     id: r.id,
@@ -72,7 +75,7 @@ export async function GET(req: Request) {
     status: r.status,
     createdAt: r.createdAt.toISOString(),
     author: r.author,
-    rejectionReason: r.rejectionReason ?? null, // ✅ renvoyé par item
+    rejectionReason: r.rejectionReason ?? null,
   }));
 
   return NextResponse.json({

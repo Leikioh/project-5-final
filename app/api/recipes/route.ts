@@ -26,7 +26,6 @@ const createSchema = z.object({
   activeTime: z.string().trim().max(100).optional().nullable(),
   totalTime: z.string().trim().max(100).optional().nullable(),
   yield: z.string().trim().max(100).optional().nullable(),
-  // on valide généreux côté API, on clampera pour la DB ensuite
   steps: z.array(z.string().trim().min(1).max(2000)).max(200).default([]),
   ingredients: z.array(z.string().trim().min(1).max(500)).max(500).default([]),
 });
@@ -34,20 +33,11 @@ type CreatePayload = z.infer<typeof createSchema>;
 
 /* ─────────── Upload utils ─────────── */
 const MAX_FILE_BYTES = 8 * 1024 * 1024; // 8MB
-const ALLOWED_MIME = new Set([
-  "image/jpeg",
-  "image/png",
-  "image/webp",
-  "image/avif",
-]);
+const ALLOWED_MIME = new Set(["image/jpeg", "image/png", "image/webp", "image/avif"]);
 
 async function saveUploadedImage(file: File): Promise<string> {
-  if (file.size > MAX_FILE_BYTES) {
-    throw new Error("Image trop lourde (max 8MB).");
-  }
-  if (file.type && !ALLOWED_MIME.has(file.type)) {
-    throw new Error("Format d’image non autorisé (jpeg/png/webp/avif).");
-  }
+  if (file.size > MAX_FILE_BYTES) throw new Error("Image trop lourde (max 8MB).");
+  if (file.type && !ALLOWED_MIME.has(file.type)) throw new Error("Format d’image non autorisé (jpeg/png/webp/avif).");
 
   const arrayBuffer = await file.arrayBuffer();
   const buffer = Buffer.from(arrayBuffer);
@@ -61,7 +51,7 @@ async function saveUploadedImage(file: File): Promise<string> {
   await fs.mkdir(uploadDir, { recursive: true });
   await fs.writeFile(path.join(uploadDir, fname), buffer);
 
-  // IMPORTANT: on renvoie un chemin **relatif** (pas d’URL absolue)
+  // Chemin relatif (public)
   return `/uploads/${fname}`;
 }
 
@@ -84,9 +74,8 @@ async function parseMultipart(req: NextRequest): Promise<{ payload: CreatePayloa
   };
 
   const parsed = createSchema.safeParse(payloadRaw);
-  if (!parsed.success) {
-    throw new Error("Invalid multipart payload");
-  }
+  if (!parsed.success) throw new Error("Invalid multipart payload");
+
   const image = (form.get("image") as File | null) || null;
   return { payload: parsed.data, imageFile: image && image.size > 0 ? image : null };
 }
@@ -94,9 +83,7 @@ async function parseMultipart(req: NextRequest): Promise<{ payload: CreatePayloa
 async function parseJson(req: NextRequest): Promise<CreatePayload> {
   const raw = await req.json();
   const parsed = createSchema.safeParse(raw);
-  if (!parsed.success) {
-    throw new Error("Invalid JSON payload");
-  }
+  if (!parsed.success) throw new Error("Invalid JSON payload");
   return parsed.data;
 }
 
@@ -114,44 +101,31 @@ export async function POST(req: NextRequest) {
       const { payload: p, imageFile } = await parseMultipart(req);
       payload = p;
       if (imageFile) {
-        imageUrl = await saveUploadedImage(imageFile); // ← renvoie '/uploads/xxx'
+        imageUrl = await saveUploadedImage(imageFile);
       }
     } else {
       payload = await parseJson(req);
-      // pas d’URL image JSON ici : on favorise l’upload multipart
     }
 
-    const {
-      title,
-      description,
-      activeTime,
-      totalTime,
-      yield: yieldVal,
-      steps,
-      ingredients,
-    } = payload;
+    const { title, description, activeTime, totalTime, yield: yieldVal, steps, ingredients } = payload;
 
     // 2) Clamp des champs susceptibles d’être en VARCHAR(191) dans ta DB
     const stepsClamped = steps.map((t) => clamp(t));
     const ingredientsClamped = ingredients.map((n) => clamp(n));
 
-    // 3) Créer la recette, status PENDING (modération), slug ajouté après
+    // 3) Créer la recette (status PENDING), slug après
     const created = await prisma.recipe.create({
       data: {
         title: clamp(title, 200),
-        description: description ?? null, // TEXT côté DB
-        imageUrl, // chemin relatif
+        description: description ?? null,
+        imageUrl,
         activeTime: activeTime ? clamp(activeTime, 100) : null,
         totalTime: totalTime ? clamp(totalTime, 100) : null,
         yield: yieldVal ? clamp(yieldVal, 100) : null,
         authorId: userId,
         status: "PENDING",
-        steps: stepsClamped.length
-          ? { create: stepsClamped.map((text) => ({ text })) }
-          : undefined,
-        ingredients: ingredientsClamped.length
-          ? { create: ingredientsClamped.map((name) => ({ name })) }
-          : undefined,
+        steps: stepsClamped.length ? { create: stepsClamped.map((text) => ({ text })) } : undefined,
+        ingredients: ingredientsClamped.length ? { create: ingredientsClamped.map((name) => ({ name })) } : undefined,
       },
       select: { id: true, title: true },
     });
@@ -161,9 +135,9 @@ export async function POST(req: NextRequest) {
     let finalSlug = `${base}-${created.id}`;
     try {
       await prisma.recipe.update({ where: { id: created.id }, data: { slug: finalSlug } });
-    } catch (e) {
-      const maybe = e as { code?: string; meta?: { target?: unknown } };
-      if (maybe.code === "P2002") {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } catch (e: any) {
+      if (e?.code === "P2002") {
         finalSlug = `${base}-${created.id}-${Date.now().toString(36)}`;
         await prisma.recipe.update({ where: { id: created.id }, data: { slug: finalSlug } });
       } else {
@@ -181,6 +155,7 @@ export async function POST(req: NextRequest) {
 
 /* ───────────────── GET (liste publique) ─────────────────
    → Public : seulement recipes non supprimées ET approuvées
+   → Recherche portable : SANS `mode: "insensitive"` pour éviter l’erreur
 */
 export async function GET(req: NextRequest) {
   try {
@@ -200,17 +175,19 @@ export async function GET(req: NextRequest) {
       status: "APPROVED" as const,
     };
 
+    // ⚠️ Pas de `mode: "insensitive"` pour rester compatible
     const where =
       q.length > 0
         ? {
             ...whereBase,
             OR: [
-              { title: { contains: q, mode: "insensitive" as const } },
-              { description: { contains: q, mode: "insensitive" as const } },
+              { title: { contains: q } },
+              { description: { contains: q } },
             ],
           }
         : whereBase;
 
+    // Pagination si page & take sont valides
     if (Number.isFinite(page) && Number.isFinite(take)) {
       const total = await prisma.recipe.count({ where });
       const pageCount = Math.max(1, Math.ceil(total / (take as number)));
@@ -230,6 +207,7 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ items, total, page, pageCount });
     }
 
+    // Sinon, renvoyer la liste complète (non paginée)
     const recipes = await prisma.recipe.findMany({
       where,
       orderBy: { createdAt: "desc" },
@@ -242,6 +220,8 @@ export async function GET(req: NextRequest) {
     return NextResponse.json(recipes);
   } catch (err) {
     console.error("GET /api/recipes error:", err);
-    return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
+    // Expose un message utile au client (ton HomeClient l’affiche)
+    const msg = err instanceof Error ? err.message : "Erreur serveur";
+    return NextResponse.json({ error: msg }, { status: 500 });
   }
 }

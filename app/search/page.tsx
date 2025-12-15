@@ -3,11 +3,9 @@
 import React from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { FaSearch } from "react-icons/fa";
 import LikeButton from "@/components/LikeButton";
 import { apiPath } from "@/lib/api";
 import Footer from "@/components/Footer";
-import Pagination from "@/components/Pagination";
 
 type Recipe = {
   id: number;
@@ -26,120 +24,179 @@ type PagedResponse = {
 
 type RecipesResponse = PagedResponse | Recipe[];
 
-function SearchBar({
+/* ── SearchBar instantanée (debounce 300 ms) ── */
+function SearchBarInstant({
   value,
   onChange,
-  onSubmit,
 }: {
   value: string;
   onChange: (v: string) => void;
-  onSubmit: () => void;
 }) {
   return (
     <div className="max-w-5xl mx-auto px-4 mb-12 mt-10">
-      <div className="bg-[#fef7f7] border border-gray-200 rounded-lg flex items-center px-4 py-3 shadow-sm">
-        <FaSearch className="text-gray-400 mr-3" aria-hidden="true" />
+      <div className="border border-gray-200 rounded-lg flex items-center px-4 py-3 shadow-sm">
+        <label htmlFor="search-q" className="sr-only">
+          Search for recipes
+        </label>
         <input
-          type="text"
+          id="search-q"
+          type="search"
           placeholder="Search for recipes..."
           value={value}
           onChange={(e) => onChange(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") onSubmit();
-          }}
           className="flex-1 outline-none bg-transparent text-gray-800 placeholder-gray-500"
           aria-label="Search recipes"
+          inputMode="search"
         />
-        <button
-          onClick={onSubmit}
-          className="ml-3 px-4 py-2 rounded-md bg-orange-500 text-white font-medium"
-        >
-          Search
-        </button>
       </div>
     </div>
   );
 }
 
-export default function SearchPage() {
+export default function SearchPage(): React.JSX.Element {
   const TAKE = 12;
+
+  // Saisie utilisateur + version "debounced"
   const [query, setQuery] = React.useState("");
-  const lastQueryRef = React.useRef("");
-  const [page, setPage] = React.useState(1);
-  const [pageCount, setPageCount] = React.useState(1);
+  const [debouncedQ, setDebouncedQ] = React.useState("");
+
+  React.useEffect(() => {
+    const id = window.setTimeout(() => setDebouncedQ(query.trim()), 300);
+    return () => window.clearTimeout(id);
+  }, [query]);
+
+  // Données + états
   const [recipes, setRecipes] = React.useState<Recipe[]>([]);
-  const [loading, setLoading] = React.useState(true);
+  const [page, setPage] = React.useState(1);
+  const [hasMore, setHasMore] = React.useState(true);
+  const [loadingInitial, setLoadingInitial] = React.useState(false);
+  const [loadingMore, setLoadingMore] = React.useState(false);
+  const loading = loadingInitial || loadingMore;
   const [error, setError] = React.useState<string | null>(null);
 
-  const load = React.useCallback(
-    async (p: number, q: string) => {
-      setLoading(true);
+  // Abort uniquement pour les chargements initiaux
+  const initialAbortRef = React.useRef<AbortController | null>(null);
+
+  // Garde-fou: empêche plusieurs “load more” simultanés
+  const isFetchingMoreRef = React.useRef(false);
+
+  const loadPage = React.useCallback(
+    async (p: number, q: string, append: boolean) => {
+      if (append) {
+        if (isFetchingMoreRef.current) return; // déjà en cours
+        isFetchingMoreRef.current = true;
+        setLoadingMore(true);
+      } else {
+        // annule le précédent initial si existant
+        if (initialAbortRef.current) initialAbortRef.current.abort();
+        initialAbortRef.current = new AbortController();
+        setLoadingInitial(true);
+      }
+
       setError(null);
 
-      const url = new URL(apiPath("/api/recipes"), window.location.origin);
-      url.searchParams.set("page", String(p));
-      url.searchParams.set("take", String(TAKE));
-      if (q.trim()) url.searchParams.set("q", q.trim());
-
       try {
-        const res = await fetch(url.toString(), { cache: "no-store", credentials: "include" });
+        const ctrl = append ? undefined : initialAbortRef.current!;
+        const url = new URL(apiPath("/api/recipes"), window.location.origin);
+        url.searchParams.set("page", String(p));
+        url.searchParams.set("take", String(TAKE));
+        if (q) url.searchParams.set("q", q);
+
+        const res = await fetch(url.toString(), {
+          cache: "no-store",
+          signal: ctrl?.signal,
+        });
+
         if (!res.ok) {
-          const res2 = await fetch(apiPath("/api/recipes"), { cache: "no-store" });
-          if (!res2.ok) {
-            setRecipes([]);
-            setPageCount(1);
-            setError("Erreur de chargement des recettes.");
-            return;
-          }
-          const data2: RecipesResponse = await res2.json();
-          const arr = Array.isArray(data2) ? data2 : data2.items;
-          const filtered = q.trim()
-            ? arr.filter((r) => r.title.toLowerCase().includes(q.trim().toLowerCase()))
-            : arr;
-          const total = filtered.length;
-          const pc = Math.max(1, Math.ceil(total / TAKE));
-          setPageCount(pc);
-          const start = (p - 1) * TAKE;
-          setRecipes(filtered.slice(start, start + TAKE));
+          let msg = `Erreur ${res.status}`;
+          try {
+            const j = await res.json();
+            msg = j?.error || j?.message || msg;
+          } catch {}
+          setError(msg);
+          if (!append) setRecipes([]);
+          setHasMore(false);
           return;
         }
 
         const data: RecipesResponse = await res.json();
+
         if (Array.isArray(data)) {
-          const filtered = lastQueryRef.current
-            ? data.filter((r) =>
-                r.title.toLowerCase().includes(lastQueryRef.current.toLowerCase())
-              )
+          // Fallback non paginé → simuler la pagination côté client
+          const source = q
+            ? data.filter((r) => r.title.toLowerCase().includes(q.toLowerCase()))
             : data;
-          const total = filtered.length;
-          const pc = Math.max(1, Math.ceil(total / TAKE));
-          setPageCount(pc);
+
           const start = (p - 1) * TAKE;
-          setRecipes(filtered.slice(start, start + TAKE));
+          const slice = source.slice(start, start + TAKE);
+          setHasMore(start + TAKE < source.length);
+
+          setRecipes((prev) => {
+            const merged = append ? [...prev, ...slice] : slice;
+            const map = new Map<number, Recipe>();
+            for (const r of merged) map.set(r.id, r);
+            return Array.from(map.values());
+          });
         } else {
-          setRecipes(data.items);
-          setPageCount(Math.max(1, data.pageCount));
+          const { items, pageCount } = data;
+          setHasMore(p < pageCount && items.length > 0);
+
+          setRecipes((prev) => {
+            const merged = append ? [...prev, ...items] : items;
+            const map = new Map<number, Recipe>();
+            for (const r of merged) map.set(r.id, r);
+            return Array.from(map.values());
+          });
         }
-      } catch {
+      } catch (e) {
+        // Abort d’un initial load: on ignore
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        if (!append && (e as any)?.name === "AbortError") return;
         setError("Erreur de chargement des recettes.");
-        setRecipes([]);
-        setPageCount(1);
+        if (!append) setRecipes([]);
+        setHasMore(false);
       } finally {
-        setLoading(false);
+        if (append) {
+          isFetchingMoreRef.current = false;
+          setLoadingMore(false);
+        } else {
+          setLoadingInitial(false);
+        }
       }
     },
     [TAKE]
   );
 
+  // Nouvelle recherche → reset et charge page 1
   React.useEffect(() => {
-    void load(page, lastQueryRef.current);
-  }, [page, load]);
-
-  const triggerSearch = React.useCallback(() => {
-    lastQueryRef.current = query;
     setPage(1);
-    void load(1, query);
-  }, [query, load]);
+    setHasMore(true);
+    setRecipes([]);
+    void loadPage(1, debouncedQ, false);
+  }, [debouncedQ, loadPage]);
+
+  // Infinite scroll
+  const sentinelRef = React.useRef<HTMLDivElement | null>(null);
+
+  React.useEffect(() => {
+    const el = sentinelRef.current;
+    if (!el) return;
+
+    const io = new IntersectionObserver(
+      (entries) => {
+        const first = entries[0];
+        if (first.isIntersecting && hasMore && !loadingMore && !loadingInitial) {
+          const next = page + 1;
+          setPage(next);
+          void loadPage(next, debouncedQ, true);
+        }
+      },
+      { rootMargin: "500px 0px" }
+    );
+
+    io.observe(el);
+    return () => io.disconnect();
+  }, [page, hasMore, loadingMore, loadingInitial, debouncedQ, loadPage]);
 
   return (
     <main className="max-w-6xl mx-auto px-6 py-8">
@@ -148,61 +205,57 @@ export default function SearchPage() {
         <p className="text-gray-500 mt-2">Find your next favorite meal</p>
       </div>
 
-      <SearchBar value={query} onChange={setQuery} onSubmit={triggerSearch} />
+      <SearchBarInstant value={query} onChange={setQuery} />
 
-      {loading && <p className="text-center text-gray-500">Loading...</p>}
       {error && <p className="text-center text-red-500">{error}</p>}
 
       {!loading && !error && recipes.length === 0 && (
         <p className="text-center text-gray-500">
-          {lastQueryRef.current
-            ? `No results for “${lastQueryRef.current}”.`
-            : "No recipes available."}
+          {debouncedQ ? `No results for “${debouncedQ}”.` : "No recipes available."}
         </p>
       )}
 
-      {!loading && !error && recipes.length > 0 && (
-        <>
-          <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
-            {recipes.map((r) => (
-              <Link
-                key={r.id}
-                href={`/recipes/${r.slug}`}
-                className="bg-white rounded-lg shadow hover:shadow-lg transition overflow-hidden block"
-              >
-                <div className="relative h-48">
-                  <Image
-                    src={r.imageUrl ?? "/images/placeholder.jpg"}
-                    alt={r.title}
-                    fill
-                    className="object-cover"
-                    sizes="(max-width: 1024px) 100vw, 33vw"
-                    priority
-                  />
-                  <LikeButton
-                    recipeSlug={r.slug}
-                    className="absolute top-2 right-2 z-10"
-                  />
-                </div>
+      {recipes.length > 0 && (
+        <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+          {recipes.map((r) => (
+            <Link
+              key={r.id}
+              href={`/recipes/${r.slug}`}
+              className="bg-white rounded-lg shadow hover:shadow-lg transition overflow-hidden block"
+            >
+              <div className="relative h-48">
+                <Image
+                  src={r.imageUrl ?? "/images/placeholder.jpg"}
+                  alt={r.title}
+                  fill
+                  className="object-cover"
+                  sizes="(max-width: 1024px) 100vw, 33vw"
+                  priority
+                />
+                <LikeButton
+                  recipeSlug={r.slug}
+                  className="absolute top-2 right-2 z-10"
+                />
+              </div>
 
-                <div className="p-4">
-                  <h3 className="text-lg font-semibold text-gray-800">{r.title}</h3>
-                  <p className="text-sm text-gray-600 mt-1">
-                    by {r.author?.name ?? "Anonyme"}
-                  </p>
-                </div>
-              </Link>
-            ))}
-          </div>
-
-          {/* ✅ Nouvelle API du composant Pagination */}
-          <Pagination
-            currentPage={page}
-            totalPages={pageCount}
-            onPageChange={setPage}
-          />
-        </>
+              <div className="p-4">
+                <h3 className="text-lg font-semibold text-gray-800">{r.title}</h3>
+                <p className="text-sm text-gray-600 mt-1">
+                  by {r.author?.name ?? "Anonyme"}
+                </p>
+              </div>
+            </Link>
+          ))}
+        </div>
       )}
+
+      {/* Sentinel pour l'infinite scroll */}
+      <div ref={sentinelRef} className="h-12 flex items-center justify-center">
+        {loading && <span className="text-gray-500">Loading…</span>}
+        {!hasMore && recipes.length > 0 && (
+          <span className="text-gray-400 text-sm">No more results</span>
+        )}
+      </div>
 
       <Footer />
     </main>

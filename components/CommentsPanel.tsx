@@ -44,7 +44,6 @@ export default function CommentsPanel({ recipeId, recipeSlug }: Props) {
 
   return (
     <section id="comments" className="mt-10">
-      <h2 className="text-2xl text-gray-700 font-bold mb-3">Comments</h2>
 
       {pending && <p className="text-gray-500">Loading…</p>}
       {error && <p className="text-red-600">{error}</p>}

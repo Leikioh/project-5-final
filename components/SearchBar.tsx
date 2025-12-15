@@ -1,25 +1,41 @@
 "use client";
-import React from "react";
-import { FaSearch } from "react-icons/fa";
+import * as React from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 
-interface SearchBarProps {
-  search: string;
-  onSearchChange: (value: string) => void;
-}
+export default function SearchBar(): React.JSX.Element {
+  const router = useRouter();
+  const params = useSearchParams();
+  const [value, setValue] = React.useState<string>(params.get("q") ?? "");
 
-export default function SearchBar({ search, onSearchChange }: SearchBarProps) {
+  // Reste synchronisé si l'URL change ailleurs (back/forward)
+  React.useEffect(() => {
+    setValue(params.get("q") ?? "");
+  }, [params]);
+
+  // Debounce 300 ms → met à jour l’URL ?q=...&page=1
+  React.useEffect(() => {
+    const id = window.setTimeout(() => {
+      const q = value.trim();
+      const sp = new URLSearchParams(Array.from(params.entries()));
+      if (q) sp.set("q", q);
+      else sp.delete("q");
+      sp.set("page", "1");
+      router.replace(`?${sp.toString()}`);
+    }, 300);
+    return () => window.clearTimeout(id);
+  }, [value, params, router]);
+
   return (
-    <div className="w-full flex justify-between items-center bg-white shadow-md rounded-lg p-4 mt-10 max-w-7xl mx-auto">
+    <div className="w-full flex items-center bg-white shadow-md rounded-lg p-4 mt-10 max-w-7xl mx-auto">
+      <label htmlFor="home-q" className="sr-only">Search for recipes</label>
       <input
-        type="text"
+        id="home-q"
+        type="search"
         className="w-full px-4 py-2 outline-none border-none text-black"
         placeholder="Search for recipes..."
-        value={search}
-        onChange={(e) => onSearchChange(e.target.value)}
+        value={value}
+        onChange={(e) => setValue(e.target.value)}
       />
-      <button className="bg-orange-500 p-3 text-white rounded-lg">
-        <FaSearch />
-      </button>
     </div>
   );
 }

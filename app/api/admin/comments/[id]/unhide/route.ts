@@ -1,6 +1,12 @@
+// app/api/admin/comments/[id]/hide/route.ts
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { requireAdmin } from "@/lib/auth";
+import { revalidateTag, revalidatePath } from "next/cache";
+
+function commentsTag(recipeId: number) {
+  return `recipe-comments-${recipeId}`;
+}
 
 export const runtime = "nodejs";
 
@@ -14,14 +20,24 @@ export async function POST(
   const { id } = await params;
   const commentId = Number(id);
   if (!Number.isFinite(commentId)) {
-    return NextResponse.json({ error: "Invalid id" }, { status: 400 });
+    return NextResponse.json({ error: "Bad id" }, { status: 400 });
   }
 
-  const updated = await prisma.comment.update({
-    where: { id: commentId, deletedAt: null },
+  // on récupère la recette associée
+  const comment = await prisma.comment.findUnique({
+    where: { id: commentId },
+    select: { id: true, hidden: true, recipeId: true, recipe: { select: { slug: true } } },
+  });
+  if (!comment) return NextResponse.json({ error: "Not found" }, { status: 404 });
+
+  await prisma.comment.update({
+    where: { id: commentId },
     data: { hidden: false },
-    select: { id: true, hidden: true },
   });
 
-  return NextResponse.json(updated);
+  // 🔄 revalidation ciblée
+  revalidateTag(commentsTag(comment.recipeId));
+  if (comment.recipe?.slug) revalidatePath(`/recipes/${comment.recipe.slug}`);
+
+  return NextResponse.json({ ok: true });
 }
